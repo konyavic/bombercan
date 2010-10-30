@@ -1,11 +1,12 @@
-CC=g++
-CFLAGS=`pkg-config --cflags gtk+-2.0`
+CXX=g++
+CFLAGS=`pkg-config --cflags gtk+-2.0` -g
+CXXFLAGS=`pkg-config --cflags gtk+-2.0` -g
 LDFLAGS=`pkg-config --libs gtk+-2.0`
 
 %.exe: %.o
-	$(CC) $< -o $@ $(CFLAGS) $(LDFLAGS)
+	$(CXX) $< -o $@ $(CFLAGS) $(LDFLAGS)
 
 all: main.exe
 
 clean:
-	rm -f *.o *.exe
+	rm -f *.o *.exe *.dll

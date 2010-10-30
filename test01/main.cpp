@@ -1,5 +1,6 @@
 #include <gtk/gtk.h>
 #include <math.h>
+#include "Sprite.h"
 
 #define INC_CIRCULAR(C, D, MAX, MIN)    \
     C = C+D;                            \
@@ -10,20 +11,55 @@ cairo_surface_t *sprite_surface;
 
 void draw_sprite(cairo_surface_t *surface)
 {
-    cairo_t *cr;
-
-    cr = cairo_create(surface);
-
-    cairo_set_source_rgba(cr, 0, 0, 1, 0.3);
-    cairo_rectangle(cr, 0, 0, 60, 60);
-    cairo_fill(cr);
-
-    cairo_set_source_rgba(cr, 0, 1, 0, 0.3);
-    cairo_rectangle(cr, 30, 30, 60, 60);
-    cairo_fill(cr);
-
-    cairo_destroy(cr);
+    
 }
+
+class MySprite: public Sprite
+{
+protected:
+    double alpha, d_alpha;
+    double sw, d_sw, sh, d_sh;
+public:
+    MySprite(double x, double y, double w, double h):
+        Sprite(x, y, w, h), 
+        alpha(0), d_alpha(0.02),
+        sw(1), d_sw(0.05), sh(0.5), d_sh(0.05)
+    {};
+    void do_tick(unsigned long int) 
+    {
+        INC_CIRCULAR(alpha, d_alpha, 1, 0);
+        INC_CIRCULAR(sw, d_sw, 2, 0.5);
+        INC_CIRCULAR(sh, d_sh, 2, 0.5);
+    };
+    void do_draw(cairo_t *target_cr)
+    {
+        cairo_t *cr;
+
+        cairo_surface_t *surface = cairo_image_surface_create(
+            CAIRO_FORMAT_ARGB32, width, height);
+        cr = cairo_create(surface);
+
+        cairo_scale (cr, sw, sh);
+
+        cairo_set_source_rgba(cr, 0, 0, 1, 0.5);
+        cairo_rectangle(cr, 0, 0, 60, 60);
+        cairo_fill(cr);
+
+        cairo_set_source_rgba(cr, 0, 1, 0, 0.5);
+        cairo_rectangle(cr, 30, 30, 60, 60);
+        cairo_fill(cr);
+
+        cairo_destroy(cr);
+
+        cairo_pattern_t *sprite_mask = cairo_pattern_create_rgba(0, 0, 0, alpha);
+        cairo_set_source_surface(target_cr, surface, x, y);
+        cairo_mask(target_cr, sprite_mask);
+
+        cairo_surface_destroy(surface);
+    };
+};
+
+MySprite *s;
 
 void draw(GtkWidget *widget, cairo_t *cr)
 {
@@ -67,10 +103,8 @@ void draw(GtkWidget *widget, cairo_t *cr)
     INC_CIRCULAR(c4, cd4, 1, 0);
     INC_CIRCULAR(move, dmove, 50, -50);
 
-    draw_sprite(sprite_surface);
-    cairo_set_source_surface(cr, sprite_surface, 250, 250);
-    cairo_pattern_t *sprite_mask = cairo_pattern_create_rgba(0, 0, 0, 0.1);
-    cairo_mask(cr, sprite_mask);
+    s->do_tick(0);
+    s->do_draw(cr);
 }
 
 gboolean area_expose_event(GtkWidget *widget, 
@@ -109,7 +143,7 @@ int main(int argc, char *argv[])
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     area = gtk_drawing_area_new();
 
-    sprite_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 200, 200);
+    s = new MySprite(200, 200, 200, 200);
 
     g_signal_connect(area, "expose-event", G_CALLBACK(area_expose_event), NULL);
     g_timeout_add(1000/60, (GSourceFunc) time_handler, (gpointer) area);

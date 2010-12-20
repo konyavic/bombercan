@@ -89,7 +89,7 @@ void draw(GtkWidget *widget, cairo_t *cr)
     cairo_mask(cr, radpat);
 
     cairo_arc(cr, dx/2+move, dy/2, radius/2, 0, 2 * M_PI);
-    cairo_set_source_rgba(cr, c4, c4, c3, 0.3);
+    cairo_set_source_rgba(cr, c4, c4, c3, 0.7);
     cairo_fill_preserve(cr);
 
     double w = move > 0 ? move : -move;

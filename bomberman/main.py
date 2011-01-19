@@ -8,13 +8,6 @@ import gobject
 import time
 import cairo
 
-class Game:
-    def __init__(self):
-        self.quit = False
-        self.fps = 120
-        self.screen = (600, 600)
-        self.map = (25, 25)
-
 class Cell:
     def __init__(self, pos):
         self.pos = pos
@@ -41,30 +34,46 @@ class Stage:
         return str
 
 class Renderer:
+    def __init__(self):
+        self.nodes = {}
+
     def do_expose(self, cr):
         pass
 
+    def do_expose_nodes(self, cr):
+        for k, v in self.node.items():
+            self.node[v].do_expose(self, cr)
+
 class StageRenderer(Renderer):
-    def __init__(self, stage):
+    def __init__(self, stage, env):
         self.stage = stage
-        self.margin = (10, 10, 10, 10)
+        self.env = env
+
+        # create surface
+        self.texture = {}
+        img = cairo.ImageSurface(cairo.FORMAT_ARGB32, 24, 24)
+        self.texture['cell'] = img
 
     def do_expose(self, cr):
-        global game
-        cell_width = (game.screen[0] - self.margin[1] - self.margin[3]) / game.map[0]
-        cell_height = (game.screen[1] - self.margin[0] - self.margin[2]) / game.map[1]
+        env = self.env
+        screen_size = env['screen size']
+        map_size = env['map size']
+        margin = env['margin']
+
+        cell_width = (screen_size[0] - margin[1] - margin[3]) / map_size[0]
+        cell_height = (screen_size[1] - margin[0] - margin[2]) / map_size[1]
         cell_size = min(cell_width, cell_height)
 
-        start_x = lambda x: self.margin[3] + x * cell_size
-        start_y = lambda y: self.margin[0] + y * cell_size
+        margin_left = (screen_size[0] - map_size[0]*cell_size) / 2
+        margin_top = (screen_size[1] - map_size[1]*cell_size) / 2
+        start_x = lambda x: margin_left + x * cell_size
+        start_y = lambda y: margin_top + y * cell_size
 
-        for x in xrange(0, len(self.stage.map)):
-            for y in xrange(0, len(self.stage.map[0])):
+        for x in xrange(0, map_size[0]):
+            for y in xrange(0, map_size[1]):
                 cr.set_source_rgb(0.5, 0.5, 0.5)
                 cr.rectangle(start_x(x), start_y(y), cell_size-1, cell_size-1)
                 cr.fill()
-
-        pass
 
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0
@@ -87,77 +96,74 @@ def print_fps():
     else:
         fps_counters[fps_cur_counter] += 1
 
-def do_tick():
-    global game
-    if game.quit:
-        gtk.main_quit()
+class Game:
+    def __init__(self):
+        self.__quit__ = False
 
-    print_fps()
-    return
+        self.env = {}
+        self.env['fps'] = 120
+        self.env['screen size'] = (500, 500)
+        self.env['map size'] = (25, 25)
+        self.env['margin'] = (10, 10, 10, 10)
 
-def do_expose(widget, event):
-    global area, renderers
-    width = widget.allocation.width
-    height = widget.allocation.height
-    cr = area.window.cairo_create()    
-    for r in renderers:
-        r.do_expose(cr)
+        self.stage = Stage(*self.env['map size'])
+        self.top_renderer = StageRenderer(self.stage, self.env)
 
-    return
+    def quit(self):
+        self.__quit__ = True
 
-def do_timeout():
-    try:
-        do_tick()
-        area.queue_draw()
-    except KeyboardInterrupt:
-        global game
-        game.quit = True
+    def do_tick(self):
+        if self.__quit__:
+            gtk.main_quit()
+        print_fps()
 
-    return True
+    def do_expose(self, widget, event):
+        width = widget.allocation.width
+        height = widget.allocation.height
+        cr = widget.window.cairo_create()    
+        self.top_renderer.do_expose(cr)
 
-def do_key_press(widget, event):
-    key = event.keyval
-    print 'pressed', key
-    if key == 100:
-        print stage
+    def do_timeout(self):
+        try:
+            self.do_tick()
+            self.area.queue_draw()
+        except KeyboardInterrupt:
+            self.quit()
 
-    return True
+        return True
 
-def main():
-    # game data
-    global game
-    game = Game()
+    def do_key_press(self, widget, event):
+        key = event.keyval
+        print 'pressed', key
+        if key == 100:
+            print self.stage
 
-    global stage
-    stage = Stage(*game.map)
+        return True
 
-    # game redering
-    global renderers
-    stageRenderer = StageRenderer(stage)
-    renderers = []
-    renderers.append(stageRenderer)
+    def do_resize(self, widget, allocation):
+        self.env['screen size'] = (allocation.width, allocation.height)
 
-    # gtk init
-    global area
+    def run(self):
+        window = gtk.Window()
+        window.connect('destroy', gtk.main_quit)
+        window.connect('key-press-event', self.do_key_press)
+        window.set_default_size(*self.env['screen size'])
 
-    window = gtk.Window()
-    window.connect('destroy', gtk.main_quit)
-    window.connect('key-press-event', do_key_press)
+        area = gtk.DrawingArea()
+        area.connect('expose-event', self.do_expose)
+        area.connect('size-allocate', self.do_resize)
+        self.area = area
 
-    area = gtk.DrawingArea()
-    area.set_size_request(*game.screen)
-    area.connect('expose-event', do_expose)
-
-    window.add(area)
-    window.show_all()
+        window.add(area)
+        window.show_all()
         
-    gobject.timeout_add(1000/game.fps, do_timeout)
+        gobject.timeout_add(1000/self.env['fps'], self.do_timeout)
 
-    gtk.main()
+        gtk.main()
 
 if __name__ == '__main__':
+    game = Game()
     try:
-        main()
+        game.run()
     except KeyboardInterrupt:
-        global game
-        game.quit = True
+        game.quit()

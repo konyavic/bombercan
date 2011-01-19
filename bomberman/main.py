@@ -44,15 +44,25 @@ class Renderer:
         for k, v in self.node.items():
             self.node[v].do_expose(self, cr)
 
+def draw_simple_pattern(surface, width, height):
+    cr = cairo.Context(surface)
+    cr.set_line_width(2)
+    cr.rectangle(0, 0, width, height)
+    cr.set_source_rgb(0.5, 0.5, 1)
+    cr.fill_preserve()
+    cr.set_source_rgb(0.5, 0.5, 0.5)
+    cr.stroke()
+    del cr
+
 class StageRenderer(Renderer):
     def __init__(self, stage, env):
         self.stage = stage
         self.env = env
 
         # create surface
-        self.texture = {}
-        img = cairo.ImageSurface(cairo.FORMAT_ARGB32, 24, 24)
-        self.texture['cell'] = img
+        #self.texture = {}
+        #img = cairo.ImageSurface(cairo.FORMAT_ARGB32, 24, 24)
+        #self.texture['cell'] = img
 
     def do_expose(self, cr):
         env = self.env
@@ -69,10 +79,13 @@ class StageRenderer(Renderer):
         start_x = lambda x: margin_left + x * cell_size
         start_y = lambda y: margin_top + y * cell_size
 
+        cell_surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, cell_size, cell_size)
+        draw_simple_pattern(cell_surface, cell_size, cell_size)
+
         for x in xrange(0, map_size[0]):
             for y in xrange(0, map_size[1]):
-                cr.set_source_rgb(0.5, 0.5, 0.5)
-                cr.rectangle(start_x(x), start_y(y), cell_size-1, cell_size-1)
+                cr.set_source_surface(cell_surface, start_x(x), start_y(y))
+                cr.rectangle(start_x(x), start_y(y), cell_size, cell_size)
                 cr.fill()
 
 fps_counters = [0 for i in range(0, 5)]
@@ -118,10 +131,13 @@ class Game:
         print_fps()
 
     def do_expose(self, widget, event):
-        width = widget.allocation.width
-        height = widget.allocation.height
-        cr = widget.window.cairo_create()    
-        self.top_renderer.do_expose(cr)
+        try:
+            width = widget.allocation.width
+            height = widget.allocation.height
+            cr = widget.window.cairo_create()    
+            self.top_renderer.do_expose(cr)
+        except KeyboardInterrupt:
+            self.quit()
 
     def do_timeout(self):
         try:

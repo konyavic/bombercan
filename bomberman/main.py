@@ -2,22 +2,109 @@
 
 import gtk
 import gtk.gdk as gdk
-import math
-import random
 import gobject
 import time
 import cairo
 
-class Cell:
-    def __init__(self, pos):
-        self.pos = pos
+class Node:
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.enabled_update = True
+        self.enabled_tick = True
+        self.surface = None
+        self.children = []
+
+    def add_node(self, node):
+        self.children.append(node)
+        node.parent = self
+
+    def remove_node(self, node):
+        self.children.remove(node)
+        node.parent = None
+
+    def on_update(self):
+        pass
+
+    def on_resize(self, width, height):
+        self.width = width
+        self.height = height
+        self.on_update()
+
+    def on_tick(self, phase):
+        pass
+
+    def do_update_recursive(self, cr, x, y):
+        x, y = x + self.x, y + self.y
+        if self.enabled_update:
+            self.on_update()
+
+        if self.surface:
+            cr.set_source_surface(self.surface, x, y)
+            cr.rectangle(x, y, self.width, self.height)
+            cr.fill()
+
+        for nodes in self.children:
+            nodes.do_update_recursive(cr, x, y)
+
+    def do_tick_recursive(self, phase):
+        if self.enabled_tick:
+            self.on_tick(phase)
+
+        for nodes in self.children:
+            nodes.do_tick_recursive(phase)
+
+def draw_simple_pattern(surface, width, height):
+    cr = cairo.Context(surface)
+    cr.set_line_width(2)
+    cr.rectangle(0, 0, width, height)
+    cr.set_source_rgb(0.5, 0.5, 1)
+    cr.fill_preserve()
+    cr.set_source_rgb(0.5, 0.5, 0.5)
+    cr.stroke()
+    del cr
+
+class Cell(Node):
+    def __init__(self, x, y, width, height, opt):
+        Node.__init__(self, x, y, width, height)
+        self.pos = opt['pos']
+        self.enabled_tick = False
+        self.enabled_update = False
+        self.on_update()
 
     def __repr__(self):
         return '.'
 
-class Stage:
-    def __init__(self, width, height):
-        self.map = [[Cell([x, y]) for y in xrange(0, height)] for x in xrange(0, width)]
+    def on_update(self):
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        draw_simple_pattern(self.surface, self.width, self.height)
+
+class Stage(Node):
+    def __init__(self, x, y, width, height, opt):
+        Node.__init__(self, x, y, width, height)
+        self.map_size = opt['map_size']
+        self.margin = opt['margin']
+        self.enabled_tick = False
+        self.enabled_update = False
+
+        self.update_metrics()
+        self.map = [ [
+            Cell(
+                self.get_cell_pos(x, y)[0],
+                self.get_cell_pos(x, y)[1],
+                self.cell_size, 
+                self.cell_size, 
+                {'pos':[x, y]}
+                )
+            for y in xrange(0, self.map_size[1]) ] for x in xrange(0, self.map_size[0]) ]
+
+        for row in self.map:
+            for cell in row:
+                self.add_node(cell)
+
+        self.on_update()
 
     def __repr__(self):
         str = ''
@@ -33,60 +120,33 @@ class Stage:
 
         return str
 
-class Renderer:
-    def __init__(self):
-        self.nodes = {}
+    def update_metrics(self):
+        self.cell_size = min(
+                (self.width - self.margin[1] - self.margin[3])/self.map_size[0], 
+                (self.height - self.margin[0] - self.margin[2])/self.map_size[1]
+                )
+        self.top = (self.height - self.cell_size * self.map_size[1]) / 2
+        self.left = (self.width - self.cell_size * self.map_size[0]) / 2
 
-    def do_expose(self, cr):
-        pass
+    def get_cell_pos(self, x, y):
+        return (self.left + self.cell_size*x, self.top + self.cell_size*y)
 
-    def do_expose_nodes(self, cr):
-        for k, v in self.node.items():
-            self.node[v].do_expose(self, cr)
+    def on_update(self):
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        cr = cairo.Context(self.surface)
+        cr.rectangle(0, 0, self.width, self.height)
+        cr.set_source_rgb(0.5, 0.5, 0.5)
+        cr.fill()
 
-def draw_simple_pattern(surface, width, height):
-    cr = cairo.Context(surface)
-    cr.set_line_width(2)
-    cr.rectangle(0, 0, width, height)
-    cr.set_source_rgb(0.5, 0.5, 1)
-    cr.fill_preserve()
-    cr.set_source_rgb(0.5, 0.5, 0.5)
-    cr.stroke()
-    del cr
-
-class StageRenderer(Renderer):
-    def __init__(self, stage, env):
-        self.stage = stage
-        self.env = env
-
-        # create surface
-        #self.texture = {}
-        #img = cairo.ImageSurface(cairo.FORMAT_ARGB32, 24, 24)
-        #self.texture['cell'] = img
-
-    def do_expose(self, cr):
-        env = self.env
-        screen_size = env['screen size']
-        map_size = env['map size']
-        margin = env['margin']
-
-        cell_width = (screen_size[0] - margin[1] - margin[3]) / map_size[0]
-        cell_height = (screen_size[1] - margin[0] - margin[2]) / map_size[1]
-        cell_size = min(cell_width, cell_height)
-
-        margin_left = (screen_size[0] - map_size[0]*cell_size) / 2
-        margin_top = (screen_size[1] - map_size[1]*cell_size) / 2
-        start_x = lambda x: margin_left + x * cell_size
-        start_y = lambda y: margin_top + y * cell_size
-
-        cell_surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, cell_size, cell_size)
-        draw_simple_pattern(cell_surface, cell_size, cell_size)
-
-        for x in xrange(0, map_size[0]):
-            for y in xrange(0, map_size[1]):
-                cr.set_source_surface(cell_surface, start_x(x), start_y(y))
-                cr.rectangle(start_x(x), start_y(y), cell_size, cell_size)
-                cr.fill()
+    def on_resize(self, width, height):
+        Node.on_resize(self, width, height)
+        self.update_metrics()
+        for x in xrange(0, self.map_size[0]):
+            for y in xrange(0, self.map_size[1]):
+                cell = self.map[x][y]
+                cell.x, cell.y = self.get_cell_pos(x, y)
+                cell.on_resize(self.cell_size, self.cell_size)
+        
 
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0
@@ -113,14 +173,14 @@ class Game:
     def __init__(self):
         self.__quit__ = False
 
-        self.env = {}
-        self.env['fps'] = 120
-        self.env['screen size'] = (500, 500)
-        self.env['map size'] = (25, 25)
-        self.env['margin'] = (10, 10, 10, 10)
-
-        self.stage = Stage(*self.env['map size'])
-        self.top_renderer = StageRenderer(self.stage, self.env)
+        self.fps = 120
+        self.screen_size = [500, 500]
+        self.top_node = Stage(0, 0, 500, 500, 
+                {
+                    'map_size': [25, 25], 
+                    'margin': [10, 10, 10, 10]
+                    }
+                )
 
     def quit(self):
         self.__quit__ = True
@@ -129,13 +189,15 @@ class Game:
         if self.__quit__:
             gtk.main_quit()
         print_fps()
+        self.top_node.do_tick_recursive(12345)
 
     def do_expose(self, widget, event):
         try:
+            cr = widget.window.cairo_create()
             width = widget.allocation.width
             height = widget.allocation.height
-            cr = widget.window.cairo_create()    
-            self.top_renderer.do_expose(cr)
+            node = self.top_node
+            node.do_update_recursive(cr, 0, 0)
         except KeyboardInterrupt:
             self.quit()
 
@@ -157,13 +219,14 @@ class Game:
         return True
 
     def do_resize(self, widget, allocation):
-        self.env['screen size'] = (allocation.width, allocation.height)
+        self.screen_size = (allocation.width, allocation.height)
+        self.top_node.on_resize(allocation.width, allocation.height)
 
     def run(self):
         window = gtk.Window()
         window.connect('destroy', gtk.main_quit)
         window.connect('key-press-event', self.do_key_press)
-        window.set_default_size(*self.env['screen size'])
+        window.set_default_size(*self.screen_size)
 
         area = gtk.DrawingArea()
         area.connect('expose-event', self.do_expose)
@@ -173,7 +236,7 @@ class Game:
         window.add(area)
         window.show_all()
         
-        gobject.timeout_add(1000/self.env['fps'], self.do_timeout)
+        gobject.timeout_add(1000/self.fps, self.do_timeout)
 
         gtk.main()
 

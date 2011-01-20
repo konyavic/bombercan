@@ -4,7 +4,13 @@ from distutils.core import setup
 import py2exe
 
 setup(
-        console=['main.py'],
+        #windows = [
+        console = [
+            {
+                'script':'main.py',
+                'icon_resources': [(1, 'Star.ico')]
+                }
+            ],
         options = {
             'py2exe': {
                 'includes': 'cairo, pango, pangocairo, atk, gobject, gio'

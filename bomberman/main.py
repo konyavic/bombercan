@@ -43,8 +43,7 @@ class Node:
 
         if self.surface:
             cr.set_source_surface(self.surface, x, y)
-            cr.rectangle(x, y, self.width, self.height)
-            cr.fill()
+            cr.paint()
 
         for nodes in self.children:
             nodes.do_update_recursive(cr, x, y)
@@ -60,9 +59,9 @@ def draw_simple_pattern(surface, width, height):
     cr = cairo.Context(surface)
     cr.set_line_width(2)
     cr.rectangle(0, 0, width, height)
-    cr.set_source_rgb(0.5, 0.5, 1)
+    cr.set_source_rgba(0.5, 0.5, 1, 0.7)
     cr.fill_preserve()
-    cr.set_source_rgb(0.5, 0.5, 0.5)
+    cr.set_source_rgba(0.5, 0.5, 0.5, 0.7)
     cr.stroke()
     del cr
 
@@ -86,6 +85,7 @@ class Stage(Node):
         Node.__init__(self, x, y, width, height)
         self.map_size = opt['map_size']
         self.margin = opt['margin']
+        self.bgimg = opt['bgimg']
         self.enabled_tick = False
         self.enabled_update = False
 
@@ -104,6 +104,8 @@ class Stage(Node):
             for cell in row:
                 self.add_node(cell)
 
+        self.texture = {}
+        self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
         self.on_update()
 
     def __repr__(self):
@@ -132,11 +134,25 @@ class Stage(Node):
         return (self.left + self.cell_size*x, self.top + self.cell_size*y)
 
     def on_update(self):
+        scale_width = self.width / float(self.texture['bgimg'].get_width())
+        scale_height = self.height / float(self.texture['bgimg'].get_height())
+        if scale_width < scale_height:
+            scale = scale_height
+        else:
+            scale = scale_width
+
+        new_width = self.texture['bgimg'].get_width()*scale
+        new_height = self.texture['bgimg'].get_height()*scale
+        x = (self.width - new_width)/2
+        y = (self.height - new_height)/2
+
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
         cr = cairo.Context(self.surface)
-        cr.rectangle(0, 0, self.width, self.height)
-        cr.set_source_rgb(0.5, 0.5, 0.5)
-        cr.fill()
+        cr.scale(scale, scale)
+        cr.set_source_rgb(0, 0, 0)
+        cr.paint()
+        cr.set_source_surface(self.texture['bgimg'], x, y)
+        cr.paint_with_alpha(0.5)
 
     def on_resize(self, width, height):
         Node.on_resize(self, width, height)
@@ -178,7 +194,8 @@ class Game:
         self.top_node = Stage(0, 0, 500, 500, 
                 {
                     'map_size': [25, 25], 
-                    'margin': [10, 10, 10, 10]
+                    'margin': [10, 10, 10, 10],
+                    'bgimg': 'bg.png'
                     }
                 )
 

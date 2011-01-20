@@ -13,9 +13,9 @@ class Node:
         self.width = width
         self.height = height
         self.enabled_update = True
-        self.enabled_tick = True
         self.surface = None
         self.children = []
+        self.parent = None
 
     def add_node(self, node):
         self.children.append(node)
@@ -33,7 +33,13 @@ class Node:
         self.height = height
         self.on_update()
 
-    def on_tick(self, phase, invert):
+    def on_tick(self, interval):
+        pass
+
+    def on_animation_tick(self, interval):
+        pass
+
+    def on_action_tick(self, interval):
         pass
 
     def do_update_recursive(self, cr, x, y):
@@ -48,22 +54,24 @@ class Node:
         for nodes in self.children:
             nodes.do_update_recursive(cr, x, y)
 
-    def do_tick_recursive(self, phase, invert):
-        if self.enabled_tick:
-            self.on_tick(phase, invert)
+    def do_tick_recursive(self, interval):
+        self.on_tick(interval)
+        self.on_animation_tick(interval)
+        self.on_action_tick(interval)
 
         for nodes in self.children:
-            nodes.do_tick_recursive(phase, invert)
+            nodes.do_tick_recursive(interval)
 
 class Player(Node):
     def __init__(self, x, y, width, height, opt):
         Node.__init__(self, x, y, width, height)
         self.pos = opt['pos']
         self.img = opt['img']
-        self.enabled_tick = False
+        self.speed = opt['speed']
         self.enabled_update = False
         self.texture = {}
         self.texture['img'] = cairo.ImageSurface.create_from_png(self.img)
+        self.state = 'stopped'
         self.on_update()
 
     def on_update(self):
@@ -74,11 +82,40 @@ class Player(Node):
         cr.set_source_surface(self.texture['img'])
         cr.paint()
 
-def draw_simple_pattern(surface, width, height):
+    def on_action_tick(self, interval):
+        if self.state == 'stopped':
+            pass
+        elif self.state == 'up':
+            self.y -= interval*self.speed*self.parent.cell_size
+        elif self.state == 'down':
+            self.y += interval*self.speed*self.parent.cell_size
+        elif self.state == 'left':
+            self.x -= interval*self.speed*self.parent.cell_size
+        elif self.state == 'right':
+            self.x += interval*self.speed*self.parent.cell_size
+
+        center_x = self.x + self.parent.cell_size*0.5 - self.parent.map[0][0].x
+        center_y = self.y + self.parent.cell_size*1.5 - self.parent.map[0][0].y
+        new_pos = [int(center_x/self.parent.cell_size), int(center_y/self.parent.cell_size)]
+        if new_pos != self.pos:
+            self.parent.map[self.pos[0]][self.pos[1]].light(False)
+            self.parent.map[new_pos[0]][new_pos[1]].light(True)
+
+        self.pos = new_pos
+
+    def move(self, dir):
+        self.state = dir
+        pass
+
+    def stop(self):
+        self.state = 'stopped'
+        pass
+
+def draw_simple_pattern(surface, width, height, color):
     cr = cairo.Context(surface)
     cr.set_line_width(2)
     cr.rectangle(0, 0, width, height)
-    cr.set_source_rgba(0.5, 0.5, 1, 0.7)
+    cr.set_source_rgba(*color)
     cr.fill_preserve()
     cr.set_source_rgba(0.5, 0.5, 0.5, 0.7)
     cr.stroke()
@@ -88,8 +125,8 @@ class Cell(Node):
     def __init__(self, x, y, width, height, opt):
         Node.__init__(self, x, y, width, height)
         self.pos = opt['pos']
-        self.enabled_tick = False
         self.enabled_update = False
+        self.color = (0.5, 0.5, 1, 0.7)
         self.on_update()
 
     def __repr__(self):
@@ -97,7 +134,17 @@ class Cell(Node):
 
     def on_update(self):
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
-        draw_simple_pattern(self.surface, self.width, self.height)
+        draw_simple_pattern(self.surface, self.width, self.height, self.color)
+        self.enabled_update = False
+
+    def light(self, b):
+        if b:
+            self.color = (1, 0.5, 0, 0.7)
+            self.enabled_update = True
+        else:
+            self.color = (0.5, 0.5, 1, 0.7)
+            self.enabled_update = True
+
 
 class Stage(Node):
     def __init__(self, x, y, width, height, opt):
@@ -105,8 +152,6 @@ class Stage(Node):
         self.map_size = opt['map_size']
         self.margin = opt['margin']
         self.bgimg = opt['bgimg']
-        self.player_speed = opt['player speed']
-        #self.enabled_tick = False
         self.enabled_update = False
 
         self.update_metrics()
@@ -132,7 +177,8 @@ class Stage(Node):
                 self.cell_size*2, 
                 {
                     'pos': [0, 0],
-                    'img': 'player.png'
+                    'img': 'player.png',
+                    'speed': 3.0
                     }
                 )
         self.add_node(self.player)
@@ -202,26 +248,6 @@ class Stage(Node):
         self.player.x , self.player.y = cell.x, cell.y - self.cell_size
         self.player.on_resize(self.cell_size, self.cell_size*2)
 
-    def on_tick(self, phase, invert):
-        if self.state == 'stopped':
-            pass
-        elif self.state == 'up':
-            self.player.y -= 1
-        elif self.state == 'down':
-            self.player.y += 1
-        elif self.state == 'right':
-            self.player.x += 1
-        elif self.state == 'left':
-            self.player.x -= 1
-
-    def move_player(self, dir):
-        self.state = dir
-        pass
-
-    def stop_player(self):
-        self.state = 'stopped'
-        pass
-
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0
 last_time = time.time()
@@ -255,10 +281,14 @@ class Game:
                     'map_size': [25, 25], 
                     'margin': [20, 20, 20, 20],
                     'bgimg': 'bg.png',
-                    'player speed': 1
                     }
                 )
-        self.controller = dict([(k, False) for k in ['up', 'down', 'right', 'left']])
+        self.keymap = {
+                65361: False,
+                65362: False,
+                65363: False,
+                65364: False,
+                }
 
     def quit(self):
         self.__quit__ = True
@@ -269,14 +299,8 @@ class Game:
         print_fps()
 
         last_time = time.time()
-        phase = self.cur_time - last_time
-        invert = False
-        if phase >= 60.0:
-            self.cur_time = last_time
-            phase -= 60.0
-            invert = True
-
-        self.top_node.do_tick_recursive(phase, invert)
+        self.top_node.do_tick_recursive(last_time - self.cur_time)
+        self.cur_time = last_time
 
     def do_expose(self, widget, event):
         try:
@@ -299,33 +323,31 @@ class Game:
 
     def do_key_press(self, widget, event):
         key = event.keyval
+        self.keymap[key] = True
+
         if key == 100:
             print self.top_node
         elif key == 65361:
-            self.controller['left'] = True
-            self.top_node.move_player('left')
+            self.top_node.player.move('left')
         elif key == 65362:
-            self.controller['up'] = True
-            self.top_node.move_player('up')
+            self.top_node.player.move('up')
         elif key == 65363:
-            self.controller['right'] = True
-            self.top_node.move_player('right')
+            self.top_node.player.move('right')
         elif key == 65364:
-            self.controller['down'] = True
-            self.top_node.move_player('down')
+            self.top_node.player.move('down')
 
         return True
 
     def do_key_release(self, widget, event):
         key = event.keyval
-        if key == 65361:
-            self.controller['left'] = False
-        elif key == 65362:
-            self.controller['up'] = False
-        elif key == 65363:
-            self.controller['right'] = False
-        elif key == 65364:
-            self.controller['down'] = False
+        self.keymap[key] = False
+
+        if (self.keymap[65361] 
+                == self.keymap[65362] 
+                == self.keymap[65363] 
+                == self.keymap[65364]
+                == False):
+            self.top_node.player.stop()
 
         return True
 

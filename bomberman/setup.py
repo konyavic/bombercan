@@ -16,4 +16,7 @@ setup(
                 'includes': 'cairo, pango, pangocairo, atk, gobject, gio'
                 }
             },
+        data_files = [
+            'bg.png'
+            ]
         )

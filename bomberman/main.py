@@ -33,7 +33,7 @@ class Node:
         self.height = height
         self.on_update()
 
-    def on_tick(self, phase):
+    def on_tick(self, phase, invert):
         pass
 
     def do_update_recursive(self, cr, x, y):
@@ -48,12 +48,31 @@ class Node:
         for nodes in self.children:
             nodes.do_update_recursive(cr, x, y)
 
-    def do_tick_recursive(self, phase):
+    def do_tick_recursive(self, phase, invert):
         if self.enabled_tick:
-            self.on_tick(phase)
+            self.on_tick(phase, invert)
 
         for nodes in self.children:
-            nodes.do_tick_recursive(phase)
+            nodes.do_tick_recursive(phase, invert)
+
+class Player(Node):
+    def __init__(self, x, y, width, height, opt):
+        Node.__init__(self, x, y, width, height)
+        self.pos = opt['pos']
+        self.img = opt['img']
+        self.enabled_tick = False
+        self.enabled_update = False
+        self.texture = {}
+        self.texture['img'] = cairo.ImageSurface.create_from_png(self.img)
+        self.on_update()
+
+    def on_update(self):
+        scale = self.width / float(self.texture['img'].get_width())
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        cr = cairo.Context(self.surface)
+        cr.scale(scale, scale)
+        cr.set_source_surface(self.texture['img'])
+        cr.paint()
 
 def draw_simple_pattern(surface, width, height):
     cr = cairo.Context(surface)
@@ -86,7 +105,8 @@ class Stage(Node):
         self.map_size = opt['map_size']
         self.margin = opt['margin']
         self.bgimg = opt['bgimg']
-        self.enabled_tick = False
+        self.player_speed = opt['player speed']
+        #self.enabled_tick = False
         self.enabled_update = False
 
         self.update_metrics()
@@ -104,9 +124,24 @@ class Stage(Node):
             for cell in row:
                 self.add_node(cell)
 
+        cell = self.map[0][0]
+        self.player = Player(
+                cell.x,
+                cell.y - self.cell_size,
+                self.cell_size, 
+                self.cell_size*2, 
+                {
+                    'pos': [0, 0],
+                    'img': 'player.png'
+                    }
+                )
+        self.add_node(self.player)
+
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
         self.on_update()
+
+        self.state = 'stopped'
 
     def __repr__(self):
         str = ''
@@ -162,7 +197,30 @@ class Stage(Node):
                 cell = self.map[x][y]
                 cell.x, cell.y = self.get_cell_pos(x, y)
                 cell.on_resize(self.cell_size, self.cell_size)
-        
+
+        cell = self.map[self.player.pos[0]][self.player.pos[1]]
+        self.player.x , self.player.y = cell.x, cell.y - self.cell_size
+        self.player.on_resize(self.cell_size, self.cell_size*2)
+
+    def on_tick(self, phase, invert):
+        if self.state == 'stopped':
+            pass
+        elif self.state == 'up':
+            self.player.y -= 1
+        elif self.state == 'down':
+            self.player.y += 1
+        elif self.state == 'right':
+            self.player.x += 1
+        elif self.state == 'left':
+            self.player.x -= 1
+
+    def move_player(self, dir):
+        self.state = dir
+        pass
+
+    def stop_player(self):
+        self.state = 'stopped'
+        pass
 
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0
@@ -191,13 +249,16 @@ class Game:
 
         self.fps = 120
         self.screen_size = [500, 500]
-        self.top_node = Stage(0, 0, 500, 500, 
+        self.top_node = Stage(
+                0, 0, 500, 500, 
                 {
                     'map_size': [25, 25], 
-                    'margin': [10, 10, 10, 10],
-                    'bgimg': 'bg.png'
+                    'margin': [20, 20, 20, 20],
+                    'bgimg': 'bg.png',
+                    'player speed': 1
                     }
                 )
+        self.controller = dict([(k, False) for k in ['up', 'down', 'right', 'left']])
 
     def quit(self):
         self.__quit__ = True
@@ -206,7 +267,16 @@ class Game:
         if self.__quit__:
             gtk.main_quit()
         print_fps()
-        self.top_node.do_tick_recursive(12345)
+
+        last_time = time.time()
+        phase = self.cur_time - last_time
+        invert = False
+        if phase >= 60.0:
+            self.cur_time = last_time
+            phase -= 60.0
+            invert = True
+
+        self.top_node.do_tick_recursive(phase, invert)
 
     def do_expose(self, widget, event):
         try:
@@ -229,9 +299,33 @@ class Game:
 
     def do_key_press(self, widget, event):
         key = event.keyval
-        print 'pressed', key
         if key == 100:
-            print self.stage
+            print self.top_node
+        elif key == 65361:
+            self.controller['left'] = True
+            self.top_node.move_player('left')
+        elif key == 65362:
+            self.controller['up'] = True
+            self.top_node.move_player('up')
+        elif key == 65363:
+            self.controller['right'] = True
+            self.top_node.move_player('right')
+        elif key == 65364:
+            self.controller['down'] = True
+            self.top_node.move_player('down')
+
+        return True
+
+    def do_key_release(self, widget, event):
+        key = event.keyval
+        if key == 65361:
+            self.controller['left'] = False
+        elif key == 65362:
+            self.controller['up'] = False
+        elif key == 65363:
+            self.controller['right'] = False
+        elif key == 65364:
+            self.controller['down'] = False
 
         return True
 
@@ -240,9 +334,12 @@ class Game:
         self.top_node.on_resize(allocation.width, allocation.height)
 
     def run(self):
+        self.cur_time = time.time()
+
         window = gtk.Window()
         window.connect('destroy', gtk.main_quit)
         window.connect('key-press-event', self.do_key_press)
+        window.connect('key-release-event', self.do_key_release)
         window.set_default_size(*self.screen_size)
 
         area = gtk.DrawingArea()

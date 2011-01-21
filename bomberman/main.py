@@ -14,17 +14,19 @@ class Node:
         self.width = width
         self.height = height
 
-        self.surface = None
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
 
         self.children = []
         self.parent = None
 
         self.action_list = {}
+        self.action_remove_list = set()
         self.animation_list = {}
+        self.animation_remove_list = set()
         self.animated = False
 
     '''
-    Functions could be without restrictions
+    Functions could be called without restrictions
     '''
 
     def add_node(self, node):
@@ -44,7 +46,14 @@ class Node:
         }
 
     def remove_action(self, name):
-        del self.action_list[name]
+        if name in self.action_list:
+            self.action_remove_list.add(name)
+
+    def __remove_actions(self):
+        for name in self.action_remove_list:
+            del self.action_list[name]
+
+        self.action_remove_list = set()
 
     def add_animation(self, name, callback, delay, period, loop):
         self.animation_list[name] = {
@@ -58,10 +67,17 @@ class Node:
         }
 
     def remove_animation(self, name):
-        del self.animation_list[name]
+        if name in self.animation_list:
+            self.animation_remove_list.add(name)
+
+    def __remove_animations(self):
+        for name in self.animation_remove_list:
+            del self.animation_list[name]
+
+        self.animation_remove_list = set()
 
     '''
-    Functions should be implemented in sub-class
+    Functions should be implemented in sub-classes
     '''
     
     def on_update(self):
@@ -70,6 +86,7 @@ class Node:
     def on_resize(self, width, height):
         self.width = width
         self.height = height
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
         self.on_update()
 
     def on_tick(self, interval):
@@ -79,65 +96,80 @@ class Node:
     Functions should be called from the top
     '''
 
-    def do_update_recursive(self, cr, x, y, interval):
-        if self.animated and not self.animation_list:
-            self.on_update()
+    def __update_animation(self, name, anime, interval):
+        # remove the anime if it is done
+        if anime['done']:
+            self.remove_animation(name)
+            return
 
-        elif self.animation_list:
-            self.animated = True
-            tmp_animation_list = self.animation_list.copy()
-            for name, anime in tmp_animation_list.iteritems():
-                if anime['done']:
-                    self.remove_animation(name)
-                    continue
-
-                if not anime['started']:
-                    anime['delay'] -= interval
-                    if anime['delay'] <= 0:
-                        anime['started'] = True
-                else:
-                    anime['elapsed'] += interval
-
-                if anime['elapsed'] > anime['period']:
-                    if anime['loop']:
-                        anime['elapsed'] -= anime['period']
-                    else:
-                        anime['elapsed'] = anime['period']
-                        anime['done'] = True
-
-                if anime['started']:
-                    anime['callback'](self, anime['elapsed']/anime['period'])
-
+        # calculate delay and elapsed time
+        if not anime['started']:
+            anime['delay'] -= interval
+            if anime['delay'] <= 0:
+                anime['started'] = True
         else:
-            for action in self.action_list.itervalues():
-                if action['update']:
-                    self.on_update()
-                    break
+            anime['elapsed'] += interval
+        
+        # wrap elapsed time
+        if anime['elapsed'] > anime['period']:
+            if anime['loop']:
+                anime['elapsed'] -= anime['period']
+            else:
+                anime['elapsed'] = anime['period']
+                anime['done'] = True
 
-        x, y = x + self.x, y + self.y
-        if self.surface:
-            cr.set_source_surface(self.surface, x, y)
+        # perform this anime
+        if anime['started']:
+            anime['callback'](self, anime['elapsed']/anime['period'])
+
+    def do_update_recursive(self, cr, x, y, interval):
+        queue = [(self, x, y)]
+        while queue:
+            current, x, y = queue.pop(0)
+            if current.animated and not current.animation_list:
+                # update at the end of all animation queued
+                current.on_update()
+            elif current.animation_list:
+                # perform animation
+                current.animated = True
+                for name, anime in current.animation_list.iteritems():
+                    current.__update_animation(name, anime, interval)
+                    
+                # actual remove of done animation
+                current.__remove_animations()
+            else:
+                # update for actions causing updates
+                for action in current.action_list.itervalues():
+                    if action['update']:
+                        current.on_update()
+                        break
+
+            x, y = x + current.x, y + current.y
+            cr.set_source_surface(current.surface, x, y)
             cr.paint()
 
-        for nodes in self.children:
-            nodes.do_update_recursive(cr, x, y, interval)
+            for nodes in current.children:
+                queue.append((nodes, x, y))
 
     def do_tick_recursive(self, interval):
-        self.on_tick(interval)
+        queue = [self]
+        while queue:
+            current = queue.pop(0)
+            current.on_tick(interval)
 
-        ''' perform actions '''
-        # to allow adding\removing actions during iteration
-        tmp_action_list = self.action_list.copy()
-        for name, action in tmp_action_list.iteritems():
-            if action['done'] and not action['loop']:
-                self.remove_action[name]
-                continue
+            # perform actions
+            for name, action in current.action_list.iteritems():
+                if action['done'] and not action['loop']:
+                    current.remove_action[name]
+                else:
+                    action['callback'](current, interval)
+                    action['done'] = True
 
-            action['callback'](self, interval)
-            action['done'] = True
+            # actual remove of done actions
+            current.__remove_actions()
 
-        for nodes in self.children:
-            nodes.do_tick_recursive(interval)
+            for nodes in current.children:
+                queue.append(nodes)
 
 class Player(Node):
     def __init__(self, x, y, width, height, opt):
@@ -145,7 +177,6 @@ class Player(Node):
         self.pos = opt['pos']
         self.img = opt['img']
         self.speed = opt['speed']
-        self.enabled_update = False
         self.texture = {}
         self.texture['img'] = cairo.ImageSurface.create_from_png(self.img)
         self.state = 'stopped'
@@ -153,7 +184,6 @@ class Player(Node):
 
     def on_update(self):
         scale = self.width / float(self.texture['img'].get_width())
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
         cr = cairo.Context(self.surface)
         cr.scale(scale, scale)
         cr.set_source_surface(self.texture['img'])
@@ -190,15 +220,7 @@ class Player(Node):
     def stop(self):
         self.remove_action('move')
 
-def draw_simple_pattern(surface, width, height, color):
-    cr = cairo.Context(surface)
-    cr.set_line_width(2)
-    cr.rectangle(0, 0, width, height)
-    cr.set_source_rgba(*color)
-    cr.fill_preserve()
-    cr.set_source_rgba(0.5, 0.5, 0.5, 0.7)
-    cr.stroke()
-    del cr
+
 
 class Cell(Node):
     def __init__(self, x, y, width, height, opt):
@@ -209,11 +231,22 @@ class Cell(Node):
 
     def __repr__(self):
         return '.'
+    
+    def __draw_simple_pattern(self, color):
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        cr = cairo.Context(self.surface)
+        
+        cr.set_line_width(2)
+        cr.set_source_rgba(*color)
+        cr.paint()
+
+        cr.set_source_rgba(0.5, 0.5, 0.5, 0.7)
+        cr.rectangle(0, 0, self.width, self.height)
+        cr.stroke()
 
     def on_update(self):
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
         self.color = (0.5, 0.5, 1, 0.7)
-        draw_simple_pattern(self.surface, self.width, self.height, self.color)
+        self.__draw_simple_pattern(self.color)
 
     def on_tick(self, interval):
         if self.parent.player.pos == self.pos and self.lighted == False:
@@ -225,24 +258,22 @@ class Cell(Node):
 
     def light(self, b):
         def blink_animation(self, phase):
-            self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
             c = math.cos(phase*math.pi*2)
             self.color = (
                     0.75-0.25*c, 
                     0.25+0.25*c, 
                     0.5+0.5*c,
                     0.7)
-            draw_simple_pattern(self.surface, self.width, self.height, self.color)
+            self.__draw_simple_pattern(self.color)
 
         def fade_out_animation(self, phase):
-            self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
             tmp_color = (
                     self.color[0]+(0.5-self.color[0])*phase,
                     self.color[1]+(0.5-self.color[1])*phase,
                     self.color[2]+(1-self.color[2])*phase,
                     0.7
                     )
-            draw_simple_pattern(self.surface, self.width, self.height, tmp_color)
+            self.__draw_simple_pattern(tmp_color)
 
         if b:
             self.add_animation('blink', blink_animation, delay=0, period=1.5, loop=True)
@@ -256,7 +287,7 @@ class Stage(Node):
         self.map_size = opt['map_size']
         self.margin = opt['margin']
         self.bgimg = opt['bgimg']
-        self.enabled_update = False
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
 
         self.__update_metrics()
         self.map = [ [
@@ -331,7 +362,6 @@ class Stage(Node):
         x = (self.width - new_width)/2
         y = (self.height - new_height)/2
 
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
         cr = cairo.Context(self.surface)
         cr.scale(scale, scale)
         cr.set_source_rgb(0, 0, 0)
@@ -376,7 +406,7 @@ class Game:
     def __init__(self):
         self.__quit__ = False
 
-        self.fps = 120
+        self.fps = 80
         self.screen_size = [500, 500]
         self.top_node = Stage(
                 0, 0, 500, 500, 

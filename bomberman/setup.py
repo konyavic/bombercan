@@ -17,6 +17,7 @@ setup(
                 }
             },
         data_files = [
-            'bg.png'
+            'bg.png',
+            'player.png'
             ]
         )

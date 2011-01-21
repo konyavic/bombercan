@@ -12,10 +12,13 @@ class Node:
         self.y = y
         self.width = width
         self.height = height
-        self.enabled_update = True
+
         self.surface = None
+
         self.children = []
         self.parent = None
+
+        self.action_list = {}
 
     def add_node(self, node):
         self.children.append(node)
@@ -24,6 +27,17 @@ class Node:
     def remove_node(self, node):
         self.children.remove(node)
         node.parent = None
+
+    def add_action(self, name, callback, loop, update):
+        self.action_list[name] = {
+            'callback': callback, 
+            'loop': loop, 
+            'update': update,
+            'done': False
+        }
+
+    def remove_action(self, name):
+        del self.action_list[name]
 
     def on_update(self):
         pass
@@ -36,17 +50,13 @@ class Node:
     def on_tick(self, interval):
         pass
 
-    def on_animation_tick(self, interval):
-        pass
-
-    def on_action_tick(self, interval):
-        pass
-
     def do_update_recursive(self, cr, x, y):
-        x, y = x + self.x, y + self.y
-        if self.enabled_update:
-            self.on_update()
+        for action in self.action_list.itervalues():
+            if action['update']:
+                self.on_update()
+                break
 
+        x, y = x + self.x, y + self.y
         if self.surface:
             cr.set_source_surface(self.surface, x, y)
             cr.paint()
@@ -56,8 +66,17 @@ class Node:
 
     def do_tick_recursive(self, interval):
         self.on_tick(interval)
-        self.on_animation_tick(interval)
-        self.on_action_tick(interval)
+
+        ''' perform actions '''
+        # to allow adding\removing actions during iteration
+        tmp_action_list = self.action_list.copy()
+        for name, action in tmp_action_list.iteritems():
+            if action['done'] and not action['loop']:
+                del self.action_list[name]
+                continue
+
+            action['callback'](self, interval)
+            action['done'] = True
 
         for nodes in self.children:
             nodes.do_tick_recursive(interval)
@@ -83,33 +102,27 @@ class Player(Node):
         cr.paint()
 
     def on_action_tick(self, interval):
-        if self.state == 'stopped':
-            pass
-        elif self.state == 'up':
-            self.y -= interval*self.speed*self.parent.cell_size
-        elif self.state == 'down':
-            self.y += interval*self.speed*self.parent.cell_size
-        elif self.state == 'left':
-            self.x -= interval*self.speed*self.parent.cell_size
-        elif self.state == 'right':
-            self.x += interval*self.speed*self.parent.cell_size
-
-        center_x = self.x + self.parent.cell_size*0.5 - self.parent.map[0][0].x
-        center_y = self.y + self.parent.cell_size*1.5 - self.parent.map[0][0].y
-        new_pos = [int(center_x/self.parent.cell_size), int(center_y/self.parent.cell_size)]
-        if new_pos != self.pos:
-            self.parent.map[self.pos[0]][self.pos[1]].light(False)
-            self.parent.map[new_pos[0]][new_pos[1]].light(True)
-
-        self.pos = new_pos
+        pass
 
     def move(self, dir):
-        self.state = dir
-        pass
+        def move_action(self, interval):
+            if dir == 'up':
+                self.y -= interval*self.speed*self.parent.cell_size
+            elif dir == 'down':
+                self.y += interval*self.speed*self.parent.cell_size
+            elif dir == 'left':
+                self.x -= interval*self.speed*self.parent.cell_size
+            elif dir == 'right':
+                self.x += interval*self.speed*self.parent.cell_size
+            center_x = self.x + self.parent.cell_size*0.5 - self.parent.map[0][0].x
+            center_y = self.y + self.parent.cell_size*1.5 - self.parent.map[0][0].y
+            self.pos = [int(center_x/self.parent.cell_size), int(center_y/self.parent.cell_size)]
+            return
+
+        self.add_action('move', move_action, loop=True, update=True)
 
     def stop(self):
-        self.state = 'stopped'
-        pass
+        self.remove_action('move')
 
 def draw_simple_pattern(surface, width, height, color):
     cr = cairo.Context(surface)
@@ -125,8 +138,7 @@ class Cell(Node):
     def __init__(self, x, y, width, height, opt):
         Node.__init__(self, x, y, width, height)
         self.pos = opt['pos']
-        self.enabled_update = False
-        self.color = (0.5, 0.5, 1, 0.7)
+        self.lighted = False
         self.on_update()
 
     def __repr__(self):
@@ -134,17 +146,23 @@ class Cell(Node):
 
     def on_update(self):
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
-        draw_simple_pattern(self.surface, self.width, self.height, self.color)
-        self.enabled_update = False
+        if self.lighted:
+            color = (1, 0.5, 0, 0.7)
+        else:
+            color = (0.5, 0.5, 1, 0.7)
+        draw_simple_pattern(self.surface, self.width, self.height, color)
+
+    def on_tick(self, interval):
+        if self.parent.player.pos == self.pos and self.lighted == False:
+            self.light(True)
+        elif self.parent.player.pos != self.pos and self.lighted == True:
+            self.light(False)
 
     def light(self, b):
-        if b:
-            self.color = (1, 0.5, 0, 0.7)
-            self.enabled_update = True
-        else:
-            self.color = (0.5, 0.5, 1, 0.7)
-            self.enabled_update = True
+        def light_action(self, interval):
+            self.lighted = b
 
+        self.add_action('light', light_action, loop=False, update=True)
 
 class Stage(Node):
     def __init__(self, x, y, width, height, opt):
@@ -238,9 +256,8 @@ class Stage(Node):
     def on_resize(self, width, height):
         Node.on_resize(self, width, height)
         self.update_metrics()
-        for x in xrange(0, self.map_size[0]):
-            for y in xrange(0, self.map_size[1]):
-                cell = self.map[x][y]
+        for x, row in enumerate(self.map):
+            for y, cell in enumerate(row):
                 cell.x, cell.y = self.get_cell_pos(x, y)
                 cell.on_resize(self.cell_size, self.cell_size)
 

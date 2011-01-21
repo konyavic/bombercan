@@ -5,6 +5,7 @@ import gtk.gdk as gdk
 import gobject
 import time
 import cairo
+import math
 
 class Node:
     def __init__(self, x, y, width, height):
@@ -19,6 +20,12 @@ class Node:
         self.parent = None
 
         self.action_list = {}
+        self.animation_list = {}
+        self.animated = False
+
+    '''
+    Functions could be without restrictions
+    '''
 
     def add_node(self, node):
         self.children.append(node)
@@ -31,14 +38,32 @@ class Node:
     def add_action(self, name, callback, loop, update):
         self.action_list[name] = {
             'callback': callback, 
-            'loop': loop, 
-            'update': update,
+            'loop': bool(loop), 
+            'update': bool(update),
             'done': False
         }
 
     def remove_action(self, name):
         del self.action_list[name]
 
+    def add_animation(self, name, callback, delay, period, loop):
+        self.animation_list[name] = {
+            'callback': callback,
+            'delay':    float(delay),
+            'period':   float(period),
+            'loop':     bool(loop),
+            'started':  False,
+            'done':     False,
+            'elapsed':  0.0
+        }
+
+    def remove_animation(self, name):
+        del self.animation_list[name]
+
+    '''
+    Functions should be implemented in sub-class
+    '''
+    
     def on_update(self):
         pass
 
@@ -50,11 +75,44 @@ class Node:
     def on_tick(self, interval):
         pass
 
-    def do_update_recursive(self, cr, x, y):
-        for action in self.action_list.itervalues():
-            if action['update']:
-                self.on_update()
-                break
+    '''
+    Functions should be called from the top
+    '''
+
+    def do_update_recursive(self, cr, x, y, interval):
+        if self.animated and not self.animation_list:
+            self.on_update()
+
+        elif self.animation_list:
+            self.animated = True
+            tmp_animation_list = self.animation_list.copy()
+            for name, anime in tmp_animation_list.iteritems():
+                if anime['done']:
+                    self.remove_animation(name)
+                    continue
+
+                if not anime['started']:
+                    anime['delay'] -= interval
+                    if anime['delay'] <= 0:
+                        anime['started'] = True
+                else:
+                    anime['elapsed'] += interval
+
+                if anime['elapsed'] > anime['period']:
+                    if anime['loop']:
+                        anime['elapsed'] -= anime['period']
+                    else:
+                        anime['elapsed'] = anime['period']
+                        anime['done'] = True
+
+                if anime['started']:
+                    anime['callback'](self, anime['elapsed']/anime['period'])
+
+        else:
+            for action in self.action_list.itervalues():
+                if action['update']:
+                    self.on_update()
+                    break
 
         x, y = x + self.x, y + self.y
         if self.surface:
@@ -62,7 +120,7 @@ class Node:
             cr.paint()
 
         for nodes in self.children:
-            nodes.do_update_recursive(cr, x, y)
+            nodes.do_update_recursive(cr, x, y, interval)
 
     def do_tick_recursive(self, interval):
         self.on_tick(interval)
@@ -72,7 +130,7 @@ class Node:
         tmp_action_list = self.action_list.copy()
         for name, action in tmp_action_list.iteritems():
             if action['done'] and not action['loop']:
-                del self.action_list[name]
+                self.remove_action[name]
                 continue
 
             action['callback'](self, interval)
@@ -101,8 +159,17 @@ class Player(Node):
         cr.set_source_surface(self.texture['img'])
         cr.paint()
 
+    def on_resize(self, width, height):
+        Node.on_resize(self, width, height)
+        self.__update_pos()
+
     def on_action_tick(self, interval):
         pass
+
+    def __update_pos(self):
+        center_x = self.x + self.parent.cell_size*0.5 - self.parent.map[0][0].x
+        center_y = self.y + self.parent.cell_size*1.5 - self.parent.map[0][0].y
+        self.pos = [int(center_x/self.parent.cell_size), int(center_y/self.parent.cell_size)]
 
     def move(self, dir):
         def move_action(self, interval):
@@ -114,9 +181,8 @@ class Player(Node):
                 self.x -= interval*self.speed*self.parent.cell_size
             elif dir == 'right':
                 self.x += interval*self.speed*self.parent.cell_size
-            center_x = self.x + self.parent.cell_size*0.5 - self.parent.map[0][0].x
-            center_y = self.y + self.parent.cell_size*1.5 - self.parent.map[0][0].y
-            self.pos = [int(center_x/self.parent.cell_size), int(center_y/self.parent.cell_size)]
+
+            self.__update_pos()
             return
 
         self.add_action('move', move_action, loop=True, update=True)
@@ -146,23 +212,43 @@ class Cell(Node):
 
     def on_update(self):
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
-        if self.lighted:
-            color = (1, 0.5, 0, 0.7)
-        else:
-            color = (0.5, 0.5, 1, 0.7)
-        draw_simple_pattern(self.surface, self.width, self.height, color)
+        self.color = (0.5, 0.5, 1, 0.7)
+        draw_simple_pattern(self.surface, self.width, self.height, self.color)
 
     def on_tick(self, interval):
         if self.parent.player.pos == self.pos and self.lighted == False:
             self.light(True)
+            self.lighted = True
         elif self.parent.player.pos != self.pos and self.lighted == True:
             self.light(False)
+            self.lighted = False
 
     def light(self, b):
-        def light_action(self, interval):
-            self.lighted = b
+        def blink_animation(self, phase):
+            self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+            c = math.cos(phase*math.pi*2)
+            self.color = (
+                    0.75-0.25*c, 
+                    0.25+0.25*c, 
+                    0.5+0.5*c,
+                    0.7)
+            draw_simple_pattern(self.surface, self.width, self.height, self.color)
 
-        self.add_action('light', light_action, loop=False, update=True)
+        def fade_out_animation(self, phase):
+            self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+            tmp_color = (
+                    self.color[0]+(0.5-self.color[0])*phase,
+                    self.color[1]+(0.5-self.color[1])*phase,
+                    self.color[2]+(1-self.color[2])*phase,
+                    0.7
+                    )
+            draw_simple_pattern(self.surface, self.width, self.height, tmp_color)
+
+        if b:
+            self.add_animation('blink', blink_animation, delay=0, period=1.5, loop=True)
+        else:
+            self.remove_animation('blink')
+            self.add_animation('fade out', fade_out_animation, delay=0, period=1, loop=False)
 
 class Stage(Node):
     def __init__(self, x, y, width, height, opt):
@@ -172,11 +258,11 @@ class Stage(Node):
         self.bgimg = opt['bgimg']
         self.enabled_update = False
 
-        self.update_metrics()
+        self.__update_metrics()
         self.map = [ [
             Cell(
-                self.get_cell_pos(x, y)[0],
-                self.get_cell_pos(x, y)[1],
+                self.__get_cell_pos(x, y)[0],
+                self.__get_cell_pos(x, y)[1],
                 self.cell_size, 
                 self.cell_size, 
                 {'pos':[x, y]}
@@ -196,7 +282,7 @@ class Stage(Node):
                 {
                     'pos': [0, 0],
                     'img': 'player.png',
-                    'speed': 3.0
+                    'speed': 5.0
                     }
                 )
         self.add_node(self.player)
@@ -221,7 +307,7 @@ class Stage(Node):
 
         return str
 
-    def update_metrics(self):
+    def __update_metrics(self):
         self.cell_size = min(
                 (self.width - self.margin[1] - self.margin[3])/self.map_size[0], 
                 (self.height - self.margin[0] - self.margin[2])/self.map_size[1]
@@ -229,7 +315,7 @@ class Stage(Node):
         self.top = (self.height - self.cell_size * self.map_size[1]) / 2
         self.left = (self.width - self.cell_size * self.map_size[0]) / 2
 
-    def get_cell_pos(self, x, y):
+    def __get_cell_pos(self, x, y):
         return (self.left + self.cell_size*x, self.top + self.cell_size*y)
 
     def on_update(self):
@@ -255,10 +341,10 @@ class Stage(Node):
 
     def on_resize(self, width, height):
         Node.on_resize(self, width, height)
-        self.update_metrics()
+        self.__update_metrics()
         for x, row in enumerate(self.map):
             for y, cell in enumerate(row):
-                cell.x, cell.y = self.get_cell_pos(x, y)
+                cell.x, cell.y = self.__get_cell_pos(x, y)
                 cell.on_resize(self.cell_size, self.cell_size)
 
         cell = self.map[self.player.pos[0]][self.player.pos[1]]
@@ -315,9 +401,7 @@ class Game:
             gtk.main_quit()
         print_fps()
 
-        last_time = time.time()
-        self.top_node.do_tick_recursive(last_time - self.cur_time)
-        self.cur_time = last_time
+        self.top_node.do_tick_recursive(self.interval)
 
     def do_expose(self, widget, event):
         try:
@@ -325,12 +409,16 @@ class Game:
             width = widget.allocation.width
             height = widget.allocation.height
             node = self.top_node
-            node.do_update_recursive(cr, 0, 0)
+            node.do_update_recursive(cr, 0, 0, self.interval)
         except KeyboardInterrupt:
             self.quit()
 
     def do_timeout(self):
         try:
+            last_time = time.time()
+            self.interval = last_time - self.cur_time
+            self.cur_time = last_time
+
             self.do_tick()
             self.area.queue_draw()
         except KeyboardInterrupt:
@@ -374,6 +462,7 @@ class Game:
 
     def run(self):
         self.cur_time = time.time()
+        self.interval = 0
 
         window = gtk.Window()
         window.connect('destroy', gtk.main_quit)

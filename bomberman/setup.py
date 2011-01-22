@@ -7,7 +7,7 @@ setup(
         #windows = [
         console = [
             {
-                'script':'main.py',
+                'script':'bomberman.py',
                 'icon_resources': [(1, 'Star.ico')]
                 }
             ],

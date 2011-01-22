@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+import time
+
+import gtk
+import gtk.gdk as gdk
+import gobject
 import cairo
 
 class Node:
@@ -167,3 +172,97 @@ class Node:
 
             for nodes in current.children:
                 queue.append(nodes)
+
+class Game:
+    def __init__(self, title, top_node, screen_x, screen_y, fps):
+        self.title = title
+        self.top_node = top_node
+        self.screen_size = [int(screen_x), int(screen_y)]
+        self.timer_interval = int(1000.0/fps)
+
+        self.__quit = False
+        self.__keymap = set()
+        self.__next_keymap = set()
+
+    def quit(self):
+        self.__quit = True
+
+    def activated(self, key):
+        return not (key in self.__keymap) and (key in self.__next_keymap)
+
+    def deactivated(self, key):
+        return (key in self.__keymap) and not (key in self.__next_keymap)
+
+    def on_tick(self, interval):
+        """
+        extend this method to handle input and time events
+        """
+        pass
+        
+    def do_expose(self, widget, event):
+        try:
+            cr = widget.window.cairo_create()
+            self.top_node.do_update_recursive(cr, 0, 0, self.interval)
+        except KeyboardInterrupt:
+            self.quit()
+
+    def do_timeout(self):
+        try:
+            if self.__quit:
+                gtk.main_quit()
+
+            # calculate elapsed time
+            last_time = time.time()
+            self.interval = last_time - self.cur_time
+            self.cur_time = last_time
+            # handle input and timer events
+            self.on_tick(self.interval)
+            # take a snapshot of the lastest state of keymap
+            self.__keymap = self.__next_keymap.copy()
+            # handle timer events of nodes
+            self.top_node.do_tick_recursive(self.interval)
+            # handle frame update
+            self.area.queue_draw()
+        except KeyboardInterrupt:
+            self.quit()
+
+        return True
+
+    def do_key_press(self, widget, event):
+        key = event.keyval
+        self.__next_keymap.add(key)
+        return True
+
+    def do_key_release(self, widget, event):
+        key = event.keyval
+        if key in self.__next_keymap:
+            self.__next_keymap.remove(key)
+
+        return True
+
+    def do_resize(self, widget, allocation):
+        self.screen_size = [allocation.width, allocation.height]
+        self.top_node.on_resize(*self.screen_size)
+
+    def run(self):
+        self.cur_time = time.time()
+        self.interval = 0
+
+        window = gtk.Window()
+        window.connect('destroy', gtk.main_quit)
+        window.connect('key-press-event', self.do_key_press)
+        window.connect('key-release-event', self.do_key_release)
+        window.set_default_size(*self.screen_size)
+        window.set_title(self.title)
+
+        area = gtk.DrawingArea()
+        area.connect('expose-event', self.do_expose)
+        area.connect('size-allocate', self.do_resize)
+        self.area = area
+
+        window.add(area)
+        window.show_all()
+        
+        gobject.timeout_add(self.timer_interval, self.do_timeout)
+
+        gtk.main()

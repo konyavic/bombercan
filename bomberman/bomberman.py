@@ -1,13 +1,15 @@
 #!/usr/bin/python
 
+import math
+import time
+
 import gtk
 import gtk.gdk as gdk
 import gobject
-import time
 import cairo
-import math
 
 from pnode import Node
+from pnode import Game
 
 class Player(Node):
     def __init__(self, x, y, width, height, opt):
@@ -240,127 +242,43 @@ def print_fps():
     else:
         fps_counters[fps_cur_counter] += 1
 
-class Game:
+class Bomberman(Game):
     def __init__(self):
-        self.__quit__ = False
+        stage = Stage(0, 0, 500, 500, {
+            'map_size': [25, 25], 
+            'margin': [20, 20, 20, 20],
+            'bgimg': 'bg.png',
+            })
+        Game.__init__(self, 'Bomberman K', stage, 500, 500, 80)
 
-        self.fps = 80
-        self.screen_size = [500, 500]
-        self.top_node = Stage(
-                0, 0, 500, 500, 
-                {
-                    'map_size': [25, 25], 
-                    'margin': [20, 20, 20, 20],
-                    'bgimg': 'bg.png',
-                    }
-                )
-        self.keymap = set()
-        self.next_keymap = set()
-
-    def quit(self):
-        self.__quit__ = True
-
-    def do_tick(self):
-        if self.__quit__:
-            gtk.main_quit()
-
-        self.top_node.do_tick_recursive(self.interval)
-
-    def do_expose(self, widget, event):
-        try:
-            cr = widget.window.cairo_create()
-            width = widget.allocation.width
-            height = widget.allocation.height
-            node = self.top_node
-            node.do_update_recursive(cr, 0, 0, self.interval)
-        except KeyboardInterrupt:
-            self.quit()
-
-    def do_timeout(self):
-        def activated(key):
-            return not (key in self.keymap) and (key in self.next_keymap)
-
-        def deactivated(key):
-            return (key in self.keymap) and not (key in self.next_keymap)
-
-        try:
-            if activated(100):
-                print self.top_node
-            elif activated(65361):
-                self.top_node.player.stop()
-                self.top_node.player.move('left')
-            elif activated(65362):
-                self.top_node.player.stop()
-                self.top_node.player.move('up')
-            elif activated(65363):
-                self.top_node.player.stop()
-                self.top_node.player.move('right')
-            elif activated(65364):
-                self.top_node.player.stop()
-                self.top_node.player.move('down')
-            elif deactivated(65361):
-                self.top_node.player.stop('left')
-            elif deactivated(65362):
-                self.top_node.player.stop('up')
-            elif deactivated(65363):
-                self.top_node.player.stop('right')
-            elif deactivated(65364):
-                self.top_node.player.stop('down')
+    def on_tick(self, interval):
+        if self.activated(100):
+            print self.top_node
+        elif self.activated(65361):
+            self.top_node.player.stop()
+            self.top_node.player.move('left')
+        elif self.activated(65362):
+            self.top_node.player.stop()
+            self.top_node.player.move('up')
+        elif self.activated(65363):
+            self.top_node.player.stop()
+            self.top_node.player.move('right')
+        elif self.activated(65364):
+            self.top_node.player.stop()
+            self.top_node.player.move('down')
+        elif self.deactivated(65361):
+            self.top_node.player.stop('left')
+        elif self.deactivated(65362):
+            self.top_node.player.stop('up')
+        elif self.deactivated(65363):
+            self.top_node.player.stop('right')
+        elif self.deactivated(65364):
+            self.top_node.player.stop('down')
         
-            self.keymap = self.next_keymap.copy()
-
-            last_time = time.time()
-            self.interval = last_time - self.cur_time
-            self.cur_time = last_time
-
-            self.do_tick()
-            self.area.queue_draw()
-            print_fps()
-        except KeyboardInterrupt:
-            self.quit()
-
-        return True
-
-    def do_key_press(self, widget, event):
-        key = event.keyval
-        self.next_keymap.add(key)
-        return True
-
-    def do_key_release(self, widget, event):
-        key = event.keyval
-        if key in self.next_keymap:
-            self.next_keymap.remove(key)
-
-        return True
-
-    def do_resize(self, widget, allocation):
-        self.screen_size = (allocation.width, allocation.height)
-        self.top_node.on_resize(allocation.width, allocation.height)
-
-    def run(self):
-        self.cur_time = time.time()
-        self.interval = 0
-
-        window = gtk.Window()
-        window.connect('destroy', gtk.main_quit)
-        window.connect('key-press-event', self.do_key_press)
-        window.connect('key-release-event', self.do_key_release)
-        window.set_default_size(*self.screen_size)
-
-        area = gtk.DrawingArea()
-        area.connect('expose-event', self.do_expose)
-        area.connect('size-allocate', self.do_resize)
-        self.area = area
-
-        window.add(area)
-        window.show_all()
-        
-        gobject.timeout_add(1000/self.fps, self.do_timeout)
-
-        gtk.main()
+        print_fps()
 
 if __name__ == '__main__':
-    game = Game()
+    game = Bomberman()
     try:
         game.run()
     except KeyboardInterrupt:

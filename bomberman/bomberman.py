@@ -15,19 +15,105 @@ class Player(Node):
     def __init__(self, x, y, width, height, opt):
         Node.__init__(self, x, y, width, height)
         self.pos = opt['pos']
-        self.img = opt['img']
         self.speed = opt['speed']
-        self.texture = {}
-        self.texture['img'] = cairo.ImageSurface.create_from_png(self.img)
         self.state = 'stopped'
         self.on_update()
 
+    def __draw_feet(self, cr, x, y, margin, inverse=1):
+        cr.move_to(x, y)
+        cr.rel_line_to(0, margin * 1.3)
+        cr.rel_line_to(-inverse*margin * 0.3, 0)
+        cr.rel_line_to(0, margin * 0.3)
+        cr.rel_line_to(inverse*margin * 1, 0)
+        cr.rel_line_to(0, -margin * 0.3)
+        cr.rel_line_to(-inverse*margin * 0.3, 0)
+        cr.rel_line_to(0, margin * -1.3)
+        cr.close_path()
+
+        cr.set_source_rgb(0.2, 0.2, 0.2)
+        cr.fill_preserve()
+        cr.set_source_rgb(0, 0, 0)
+        cr.set_line_width(1)
+        cr.stroke()
+
+    def __draw_cylinder(self, cr, x, y, margin, height, color):
+        cr.move_to(x, y)
+        cr.rel_curve_to(
+                (self.width - margin * 2) / 2 - 0.5 * margin, margin * 0.7, 
+                (self.width - margin * 2) / 2 + 0.5 * margin, margin * 0.7, 
+                self.width - margin * 2, 0 
+                )
+        cr.rel_line_to(0, -height)
+        cr.rel_curve_to(
+                -(self.width - margin * 2) / 2 + 0.5 * margin, -margin * 0.7, 
+                -(self.width - margin * 2) / 2 - 0.5 * margin, -margin * 0.7, 
+                -(self.width - margin * 2), 0 
+                )
+        cr.close_path()
+
+        cr.set_source_rgb(*color)
+        cr.fill_preserve()
+        cr.set_source_rgb(0, 0, 0)
+        cr.set_line_width(1)
+        cr.stroke()
+
+        cr.move_to(x, y - height)
+        cr.rel_curve_to(
+                (self.width - margin * 2) / 2 - 0.5 * margin, margin * 0.7, 
+                (self.width - margin * 2) / 2 + 0.5 * margin, margin * 0.7, 
+                self.width - margin * 2, 0 
+                )
+
+        cr.set_source_rgb(0, 0, 0)
+        cr.set_line_width(0.8)
+        cr.stroke()
+
+    def __draw_eyes(self, cr, margin):
+        cr.save()
+        cr.scale(1, 0.5)
+        cr.arc(
+                margin * 1.9, self.height * 0.5 + margin * 4,
+                margin * 0.5,
+                0, 2*math.pi)
+        cr.restore()
+
+        cr.set_source_rgb(1, 1, 0)
+        cr.fill_preserve()
+
+        cr.set_source_rgb(0, 0, 0)
+        cr.set_line_width(1)
+        cr.stroke()
+
+        cr.save()
+        cr.scale(1, 0.5)
+        cr.arc(
+                self.width - margin * 1.9, self.height * 0.5 + margin * 4,
+                margin * 0.5,
+                0, 2*math.pi)
+        cr.restore()
+
+        cr.set_source_rgb(1, 1, 0)
+        cr.fill_preserve()
+
+        cr.set_source_rgb(0, 0, 0)
+        cr.set_line_width(1)
+        cr.stroke()
+
     def on_update(self):
-        scale = self.width / float(self.texture['img'].get_width())
+        margin = int(self.width * 0.2)
+
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
         cr = cairo.Context(self.surface)
-        cr.scale(scale, scale)
-        cr.set_source_surface(self.texture['img'])
-        cr.paint()
+        # draw feets
+        self.__draw_feet(cr, margin * 1.7, self.height - margin * 2, margin)
+        self.__draw_feet(cr, self.width - margin * 1.7, self.height - margin * 2, margin, -1)
+        # draw body
+        self.__draw_cylinder(cr, margin, self.height - margin * 2, margin, self.height * 0.3, (0, 0, 0.7))
+        # draw head
+        self.__draw_cylinder(cr, margin, self.height *0.7 - margin * 2, margin, self.height * 0.2, (0.7, 0.7, 0.7))
+        # draw eyes
+        self.__draw_eyes(cr, margin)
+
 
     def __update_pos(self):
         center_x = self.x + self.parent.cell_size*0.5 - self.parent.map[0][0].x
@@ -48,15 +134,39 @@ class Player(Node):
             self.__update_pos()
             return
 
-        #self.add_action(dir, move_action, loop=True, update=True)
+        def move_animation(self, phase):
+            margin = int(self.width * 0.2)
+            self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+            cr = cairo.Context(self.surface)
+            # draw feets
+            self.__draw_feet(cr, 
+                    margin * 1.7, 
+                    self.height - margin * 2 + margin * 0.5 * math.cos(phase*math.pi*2), 
+                    margin)
+            self.__draw_feet(cr, 
+                    self.width - margin * 1.7, 
+                    self.height - margin * 2 - margin * 0.5 * math.cos(phase*math.pi*2), 
+                    margin, -1)
+            # draw body
+            self.__draw_cylinder(cr, margin, self.height - margin * 2, margin, self.height * 0.3, (0, 0, 0.7))
+            # draw head
+            self.__draw_cylinder(cr, margin, self.height *0.7 - margin * 2, margin, self.height * 0.2, (0.7, 0.7, 0.7))
+            # draw eyes
+            self.__draw_eyes(cr, margin)
+
+            return
+
         self.add_action(dir, move_action, loop=True, update=False)
+        self.add_animation(dir, move_animation, loop=True, delay=0, period=1)
 
     def stop(self, dir=None):
         if dir:
             self.remove_action(dir)
+            self.remove_animation(dir)
         else:
             for dir in ['up', 'down', 'left', 'right']:
                 self.remove_action(dir)
+                self.remove_animation(dir)
 
 class Cell(Node):
     def __init__(self, x, y, width, height, opt):
@@ -191,7 +301,7 @@ class Stage(Node):
                 {
                     'pos': [0, 0],
                     'img': 'player.png',
-                    'speed': 5.0
+                    'speed': 2.0
                     }
                 )
         self.add_node(self.player)
@@ -306,7 +416,7 @@ def print_fps():
 class Bomberman(Game):
     def __init__(self):
         stage = Stage(0, 0, 500, 500, {
-            'map_size': [25, 25], 
+            'map_size': [16, 16], 
             'margin': [20, 20, 20, 20],
             'bgimg': 'bg.png',
             })

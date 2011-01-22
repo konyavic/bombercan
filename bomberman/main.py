@@ -46,7 +46,8 @@ class Player(Node):
             self.__update_pos()
             return
 
-        self.add_action(dir, move_action, loop=True, update=True)
+        #self.add_action(dir, move_action, loop=True, update=True)
+        self.add_action(dir, move_action, loop=True, update=False)
 
     def stop(self, dir=None):
         if dir:
@@ -109,7 +110,7 @@ class Cell(Node):
             self.__draw_simple_pattern(tmp_color)
 
         if b:
-            self.add_animation('blink', blink_animation, delay=0, period=1.5, loop=True)
+            self.add_animation('blink', blink_animation, delay=0, period=1, loop=True)
         else:
             self.remove_animation('blink')
             self.add_animation('fade out', fade_out_animation, delay=0, period=1, loop=False)
@@ -244,7 +245,6 @@ class Game:
         self.__quit__ = False
 
         self.fps = 80
-        self.input_interval = (1.0/30) # 30 Hz
         self.screen_size = [500, 500]
         self.top_node = Stage(
                 0, 0, 500, 500, 
@@ -313,11 +313,7 @@ class Game:
             self.interval = last_time - self.cur_time
             self.cur_time = last_time
 
-            self.input_elapsed += self.interval
-            if self.input_elapsed >= self.input_interval:
-                self.input_elapsed -= self.input_interval
-                self.do_tick()
-
+            self.do_tick()
             self.area.queue_draw()
             print_fps()
         except KeyboardInterrupt:
@@ -344,7 +340,6 @@ class Game:
     def run(self):
         self.cur_time = time.time()
         self.interval = 0
-        self.input_elapsed = 0
 
         window = gtk.Window()
         window.connect('destroy', gtk.main_quit)

@@ -124,6 +124,7 @@ class Node:
             current, x, y = queue.pop(0)
             if current.animated and not current.animation_list:
                 # update at the end of all animation queued
+                current.animated = False
                 current.on_update()
             elif current.animation_list:
                 # perform animation

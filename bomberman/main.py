@@ -46,12 +46,14 @@ class Player(Node):
             self.__update_pos()
             return
 
-        self.add_action('move', move_action, loop=True, update=True)
+        self.add_action(dir, move_action, loop=True, update=True)
 
-    def stop(self):
-        self.remove_action('move')
-
-
+    def stop(self, dir=None):
+        if dir:
+            self.remove_action(dir)
+        else:
+            for dir in ['up', 'down', 'left', 'right']:
+                self.remove_action(dir)
 
 class Cell(Node):
     def __init__(self, x, y, width, height, opt):
@@ -242,6 +244,7 @@ class Game:
         self.__quit__ = False
 
         self.fps = 80
+        self.input_interval = (1.0/30) # 30 Hz
         self.screen_size = [500, 500]
         self.top_node = Stage(
                 0, 0, 500, 500, 
@@ -251,12 +254,8 @@ class Game:
                     'bgimg': 'bg.png',
                     }
                 )
-        self.keymap = {
-                65361: False,
-                65362: False,
-                65363: False,
-                65364: False,
-                }
+        self.keymap = set()
+        self.next_keymap = set()
 
     def quit(self):
         self.__quit__ = True
@@ -264,7 +263,6 @@ class Game:
     def do_tick(self):
         if self.__quit__:
             gtk.main_quit()
-        print_fps()
 
         self.top_node.do_tick_recursive(self.interval)
 
@@ -279,13 +277,49 @@ class Game:
             self.quit()
 
     def do_timeout(self):
+        def activated(key):
+            return not (key in self.keymap) and (key in self.next_keymap)
+
+        def deactivated(key):
+            return (key in self.keymap) and not (key in self.next_keymap)
+
         try:
+            if activated(100):
+                print self.top_node
+            elif activated(65361):
+                self.top_node.player.stop()
+                self.top_node.player.move('left')
+            elif activated(65362):
+                self.top_node.player.stop()
+                self.top_node.player.move('up')
+            elif activated(65363):
+                self.top_node.player.stop()
+                self.top_node.player.move('right')
+            elif activated(65364):
+                self.top_node.player.stop()
+                self.top_node.player.move('down')
+            elif deactivated(65361):
+                self.top_node.player.stop('left')
+            elif deactivated(65362):
+                self.top_node.player.stop('up')
+            elif deactivated(65363):
+                self.top_node.player.stop('right')
+            elif deactivated(65364):
+                self.top_node.player.stop('down')
+        
+            self.keymap = self.next_keymap.copy()
+
             last_time = time.time()
             self.interval = last_time - self.cur_time
             self.cur_time = last_time
 
-            self.do_tick()
+            self.input_elapsed += self.interval
+            if self.input_elapsed >= self.input_interval:
+                self.input_elapsed -= self.input_interval
+                self.do_tick()
+
             self.area.queue_draw()
+            print_fps()
         except KeyboardInterrupt:
             self.quit()
 
@@ -293,31 +327,13 @@ class Game:
 
     def do_key_press(self, widget, event):
         key = event.keyval
-        self.keymap[key] = True
-
-        if key == 100:
-            print self.top_node
-        elif key == 65361:
-            self.top_node.player.move('left')
-        elif key == 65362:
-            self.top_node.player.move('up')
-        elif key == 65363:
-            self.top_node.player.move('right')
-        elif key == 65364:
-            self.top_node.player.move('down')
-
+        self.next_keymap.add(key)
         return True
 
     def do_key_release(self, widget, event):
         key = event.keyval
-        self.keymap[key] = False
-
-        if (self.keymap[65361] 
-                == self.keymap[65362] 
-                == self.keymap[65363] 
-                == self.keymap[65364]
-                == False):
-            self.top_node.player.stop()
+        if key in self.next_keymap:
+            self.next_keymap.remove(key)
 
         return True
 
@@ -328,6 +344,7 @@ class Game:
     def run(self):
         self.cur_time = time.time()
         self.interval = 0
+        self.input_elapsed = 0
 
         window = gtk.Window()
         window.connect('destroy', gtk.main_quit)

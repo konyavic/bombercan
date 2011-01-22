@@ -117,6 +117,49 @@ class Cell(Node):
             self.remove_animation('blink')
             self.add_animation('fade out', fade_out_animation, delay=0, period=1, loop=False)
 
+class MessageBox(Node):
+    def __init__(self, x, y, width, height, opt):
+        Node.__init__(self, x, y, width, height)
+        self.showing = False
+        self.on_update()
+
+    def __draw_box(self, box_width, box_height, alpha):
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        cr = cairo.Context(self.surface)
+        cr.set_source_rgba(0, 0, 0, alpha)
+        cr.rectangle(0, 0, box_width, box_height)
+        cr.fill()
+
+    def on_update(self):
+        if self.showing:
+            self.__draw_box(self.width, self.height, 0.5)
+        else:
+            self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+
+    def show(self, b):
+        def show_animation(self, phase):
+            self.__draw_box(
+                    self.width * 2 * min(0.5, phase), 
+                    self.height * 2 * max(0.05, phase - 0.5), 
+                    0.5 * phase)
+
+        def hide_animation(self, phase):
+            self.__draw_box(self.width*(1-phase), self.height*(1-phase), 0.5*(1-phase))
+
+        self.showing = b
+        if b:
+            self.remove_animation('hide')
+            self.add_animation('show', show_animation, delay=0, period=0.5, loop=False)
+        else:
+            self.remove_animation('show')
+            self.add_animation('hide', hide_animation, delay=0, period=0.1, loop=False)
+
+    def toggle(self):
+        if self.showing:
+            self.show(False)
+        else:
+            self.show(True)
+
 class Stage(Node):
     def __init__(self, x, y, width, height, opt):
         Node.__init__(self, x, y, width, height)
@@ -155,6 +198,10 @@ class Stage(Node):
         self.characters = []
         self.characters.append(self.player)
 
+        rect = self.__get_box()
+        self.box = MessageBox(*rect, opt=None)
+        self.add_node(self.box)
+
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
         self.on_update()
@@ -183,6 +230,15 @@ class Stage(Node):
 
     def __get_cell_pos(self, x, y):
         return (self.left + self.cell_size*x, self.top + self.cell_size*y)
+
+    def __get_box(self):
+        height = max(150, (self.height - self.margin[0] - self.margin[2]) / 3)
+        return (
+                self.margin[3], 
+                self.height - self.margin[2] - height, 
+                self.width - self.margin[1] - self.margin[3],
+                height
+                )
 
     def on_update(self):
         scale_width = self.width / float(self.texture['bgimg'].get_width())
@@ -220,6 +276,11 @@ class Stage(Node):
             c.x = (c.x - old_left) * ratio + self.left
             c.y = (c.y - old_top) * ratio + self.top
             c.on_resize(int(c.width * ratio), int(c.height * ratio))
+
+        rect = self.__get_box()
+        self.box.x = rect[0]
+        self.box.y = rect[1]
+        self.box.on_resize(rect[2], rect[3])
 
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0
@@ -274,6 +335,9 @@ class Bomberman(Game):
             self.top_node.player.stop('right')
         elif self.deactivated(65364):
             self.top_node.player.stop('down')
+
+        if self.deactivated(32):
+            self.top_node.box.toggle()
         
         print_fps()
 

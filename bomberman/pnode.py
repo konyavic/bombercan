@@ -78,6 +78,7 @@ class Node:
     def on_update(self):
         pass
 
+    # on_resize could be recursive because it is not a heavily-happening event
     def on_resize(self, width, height):
         self.width = width
         self.height = height
@@ -130,7 +131,7 @@ class Node:
                 for name, anime in current.animation_list.iteritems():
                     current.__update_animation(name, anime, interval)
                     
-                # actual remove of done animation
+                # actual removal of done animation
                 current.__remove_animations()
             else:
                 # update for actions causing updates
@@ -160,7 +161,7 @@ class Node:
                     action['callback'](current, interval)
                     action['done'] = True
 
-            # actual remove of done actions
+            # actual removal of done actions
             current.__remove_actions()
 
             for nodes in current.children:

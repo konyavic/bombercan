@@ -27,10 +27,6 @@ class Player(Node):
         cr.set_source_surface(self.texture['img'])
         cr.paint()
 
-    def on_resize(self, width, height):
-        Node.on_resize(self, width, height)
-        self.__update_pos()
-
     def __update_pos(self):
         center_x = self.x + self.parent.cell_size*0.5 - self.parent.map[0][0].x
         center_y = self.y + self.parent.cell_size*1.5 - self.parent.map[0][0].y
@@ -122,9 +118,8 @@ class Stage(Node):
         self.map_size = opt['map_size']
         self.margin = opt['margin']
         self.bgimg = opt['bgimg']
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
-
         self.__update_metrics()
+
         self.map = [ [
             Cell(
                 self.__get_cell_pos(x, y)[0],
@@ -152,12 +147,12 @@ class Stage(Node):
                     }
                 )
         self.add_node(self.player)
+        self.characters = []
+        self.characters.append(self.player)
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
         self.on_update()
-
-        self.state = 'stopped'
 
     def __repr__(self):
         str = ''
@@ -205,16 +200,21 @@ class Stage(Node):
         cr.paint_with_alpha(0.5)
 
     def on_resize(self, width, height):
+        old_cell_size, old_top, old_left = self.cell_size, self.top, self.left
+
         Node.on_resize(self, width, height)
         self.__update_metrics()
+
         for x, row in enumerate(self.map):
             for y, cell in enumerate(row):
                 cell.x, cell.y = self.__get_cell_pos(x, y)
                 cell.on_resize(self.cell_size, self.cell_size)
 
-        cell = self.map[self.player.pos[0]][self.player.pos[1]]
-        self.player.x , self.player.y = cell.x, cell.y - self.cell_size
-        self.player.on_resize(self.cell_size, self.cell_size*2)
+        ratio = float(self.cell_size) / old_cell_size
+        for c in self.characters:
+            c.x = (c.x - old_left) * ratio + self.left
+            c.y = (c.y - old_top) * ratio + self.top
+            c.on_resize(int(c.width * ratio), int(c.height * ratio))
 
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0

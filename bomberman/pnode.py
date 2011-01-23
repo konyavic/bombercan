@@ -57,12 +57,13 @@ class Node:
 
         self.action_remove_list = set()
 
-    def add_animation(self, name, callback, delay, period, loop):
+    def add_animation(self, name, callback, delay, period, loop, cleanup=None):
         self.animation_list[name] = {
             'callback': callback,
             'delay':    float(delay),
             'period':   float(period),
             'loop':     bool(loop),
+            'cleanup':  cleanup,
             'started':  False,
             'done':     False,
             'elapsed':  0.0
@@ -103,6 +104,9 @@ class Node:
         # remove the anime if it is done
         if anime['done']:
             self.remove_animation(name)
+            if anime['cleanup']:
+                anime['cleanup'](self)
+
             return
 
         # calculate delay and elapsed time
@@ -126,9 +130,9 @@ class Node:
             anime['callback'](self, anime['elapsed']/anime['period'])
 
     def do_update_recursive(self, cr, x, y, interval):
-        queue = [(self, x, y)]
-        while queue:
-            current, x, y = queue.pop(0)
+        stack = [(self, x, y)]
+        while stack:
+            current, x, y = stack.pop(0)
             if current.animated and not current.animation_list:
                 # update at the end of all animation queued
                 current.animated = False
@@ -163,8 +167,7 @@ class Node:
                 cr.paint()
                 cr.restore()
 
-            for nodes in current.children:
-                queue.append((nodes, x, y))
+            stack = [(node, x, y) for node in current.children] + stack
 
     def do_tick_recursive(self, interval):
         queue = [self]

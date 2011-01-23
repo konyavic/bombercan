@@ -168,13 +168,14 @@ class Player(Node):
                 self.remove_action(dir)
                 self.remove_animation(dir)
 
-    def bomb(self, count):
-        self.parent.bomb(self.pos[0], self.pos[1], count)
+    def bomb(self):
+        self.parent.bomb(self.pos[0], self.pos[1], 5, 3)
 
 class Bomb(Node):
     def __init__(self, x, y, width, height, opt):
         Node.__init__(self, x, y, width, height)
         self.count = float(opt['count'])
+        self.power = int(opt['power'])
         self.on_update()
 
         def counting_animation(self, phase):
@@ -189,13 +190,13 @@ class Bomb(Node):
         cr.arc(self.width * 0.6, self.height * 0.33, self.width * 0.2, 0, math.pi * 2)
         cr.set_source_rgb(0.2, 0.2, 0.2)
         cr.fill_preserve()
-        cr.set_line_width(1)
+        cr.set_line_width(1.5)
         cr.set_source_rgb(0, 0, 0)
         cr.stroke()
         cr.arc(self.width * 0.45, self.height * 0.55, self.width * 0.35, 0, math.pi * 2)
         cr.set_source_rgb(0.2, 0.2, 0.2)
         cr.fill_preserve()
-        cr.set_line_width(1)
+        cr.set_line_width(1.5)
         cr.set_source_rgb(0, 0, 0)
         cr.stroke()
 
@@ -205,6 +206,7 @@ class Bomb(Node):
             self.explode()
 
     def explode(self):
+        self.parent.parent.effect.explode(self.parent.pos[0], self.parent.pos[1], self.power)
         self.parent.remove_node(self)
 
 class Cell(Node):
@@ -314,6 +316,35 @@ class MessageBox(Node):
         else:
             self.show(True)
 
+class ExplodeEffect(Node):
+    def __init__(self, x, y, width, height, opt):
+        Node.__init__(self, x, y, width, height)
+
+        def explode_animation(self, phase):
+            self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+            cr = cairo.Context(self.surface)
+            cr.set_source_rgba(1, 1, 0, 0.5)
+            cr.paint()
+
+        def explode_cleanup(self):
+            self.parent.remove_node(self)
+
+        self.add_animation('explode', explode_animation, loop=False, delay=0, period=1, cleanup=explode_cleanup)
+
+class MapEffectLayer(Node):
+    def __init__(self, x, y, width, height, opt):
+        Node.__init__(self, x, y, width, height)
+
+    def explode(self, x, y, power):
+        cell = self.parent.map[x][y]
+        self.add_node( ExplodeEffect(
+            cell.x - power * self.parent.cell_size,
+            cell.y - power * self.parent.cell_size,
+            (power * 2 + 1) * self.parent.cell_size,
+            (power * 2 + 1) * self.parent.cell_size,
+            opt=None
+            ))
+
 class Stage(Node):
     def __init__(self, x, y, width, height, opt):
         Node.__init__(self, x, y, width, height)
@@ -351,6 +382,11 @@ class Stage(Node):
         self.add_node(self.player)
         self.characters = []
         self.characters.append(self.player)
+
+        cell = self.map[0][0]
+        self.effect = MapEffectLayer(
+                0, 0, self.width, self.height, opt=None)
+        self.add_node(self.effect)
 
         rect = self.__get_box()
         self.box = MessageBox(*rect, opt=None)
@@ -436,14 +472,15 @@ class Stage(Node):
         self.box.y = rect[1]
         self.box.on_resize(rect[2], rect[3])
 
-    def bomb(self, x, y, count):
+    def bomb(self, x, y, count, power):
         cell = self.map[x][y]
         bomb = Bomb(
                 0, 0,
                 self.cell_size, 
                 self.cell_size, 
                 {
-                    'count': count
+                    'count': count,
+                    'power': power
                     }
                 )
         cell.add_node(bomb)
@@ -506,7 +543,7 @@ class Bomberman(Game):
             self.top_node.box.toggle()
 
         if self.activated(122):
-            self.top_node.player.bomb(10)
+            self.top_node.player.bomb()
         
         print_fps()
 

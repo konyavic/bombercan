@@ -25,6 +25,8 @@ class Node:
         self.animation_remove_list = set()
         self.animated = False
 
+        self.scale = 1.0
+
     '''
     Functions could be called without restrictions
     '''
@@ -146,9 +148,20 @@ class Node:
                         current.on_update()
                         break
 
-            x, y = x + current.x, y + current.y
-            cr.set_source_surface(current.surface, x, y)
-            cr.paint()
+            if current.scale == 1.0:
+                x, y = x + current.x, y + current.y
+                cr.set_source_surface(current.surface, x, y)
+                cr.paint()
+            else:
+                x, y = (
+                        x / current.scale + current.x - current.width * (1 - 1 / current.scale) * 0.5, 
+                        y / current.scale + current.y - current.height * (1 - 1 / current.scale) * 0.5
+                        )
+                cr.save()
+                cr.scale(current.scale, current.scale)
+                cr.set_source_surface(current.surface, x, y)
+                cr.paint()
+                cr.restore()
 
             for nodes in current.children:
                 queue.append((nodes, x, y))

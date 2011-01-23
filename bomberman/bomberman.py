@@ -168,6 +168,45 @@ class Player(Node):
                 self.remove_action(dir)
                 self.remove_animation(dir)
 
+    def bomb(self, count):
+        self.parent.bomb(self.pos[0], self.pos[1], count)
+
+class Bomb(Node):
+    def __init__(self, x, y, width, height, opt):
+        Node.__init__(self, x, y, width, height)
+        self.count = float(opt['count'])
+        self.on_update()
+
+        def counting_animation(self, phase):
+            self.scale = 1.25 - 0.25 * math.cos(phase*math.pi*2)
+
+        self.add_animation('counting', counting_animation, loop=True, delay=0, period=1.5)
+
+
+    def on_update(self):
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        cr = cairo.Context(self.surface)
+        cr.arc(self.width * 0.6, self.height * 0.33, self.width * 0.2, 0, math.pi * 2)
+        cr.set_source_rgb(0.2, 0.2, 0.2)
+        cr.fill_preserve()
+        cr.set_line_width(1)
+        cr.set_source_rgb(0, 0, 0)
+        cr.stroke()
+        cr.arc(self.width * 0.45, self.height * 0.55, self.width * 0.35, 0, math.pi * 2)
+        cr.set_source_rgb(0.2, 0.2, 0.2)
+        cr.fill_preserve()
+        cr.set_line_width(1)
+        cr.set_source_rgb(0, 0, 0)
+        cr.stroke()
+
+    def on_tick(self, interval):
+        self.count -= interval
+        if self.count < 0:
+            self.explode()
+
+    def explode(self):
+        self.parent.remove_node(self)
+
 class Cell(Node):
     def __init__(self, x, y, width, height, opt):
         Node.__init__(self, x, y, width, height)
@@ -193,6 +232,11 @@ class Cell(Node):
     def on_update(self):
         self.color = (0.5, 0.5, 1, 0.7)
         self.__draw_simple_pattern(self.color)
+
+    def on_resize(self, width, height):
+        Node.on_resize(self, width, height)
+        for node in self.children:
+            node.on_resize(width, height)
 
     def on_tick(self, interval):
         if self.parent.player.pos == self.pos and self.lighted == False:
@@ -299,7 +343,7 @@ class Stage(Node):
                 self.cell_size, 
                 self.cell_size*2, 
                 {
-                    'pos': [0, 0],
+                    'pos': cell.pos,
                     'img': 'player.png',
                     'speed': 2.0
                     }
@@ -392,6 +436,18 @@ class Stage(Node):
         self.box.y = rect[1]
         self.box.on_resize(rect[2], rect[3])
 
+    def bomb(self, x, y, count):
+        cell = self.map[x][y]
+        bomb = Bomb(
+                0, 0,
+                self.cell_size, 
+                self.cell_size, 
+                {
+                    'count': count
+                    }
+                )
+        cell.add_node(bomb)
+
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0
 last_time = time.time()
@@ -446,8 +502,11 @@ class Bomberman(Game):
         elif self.deactivated(65364):
             self.top_node.player.stop('down')
 
-        if self.deactivated(32):
+        if self.activated(32):
             self.top_node.box.toggle()
+
+        if self.activated(122):
+            self.top_node.player.bomb(10)
         
         print_fps()
 

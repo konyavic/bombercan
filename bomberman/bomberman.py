@@ -16,6 +16,7 @@ class Player(Node):
         Node.__init__(self, x, y, width, height)
         self.pos = opt['pos']
         self.speed = opt['speed']
+        self.get_cell_size = opt['get_cell_size']
         self.state = 'stopped'
         self.on_update()
 
@@ -104,6 +105,7 @@ class Player(Node):
 
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
         cr = cairo.Context(self.surface)
+        cr.set_line_join(cairo.LINE_JOIN_ROUND)
         # draw feets
         self.__draw_feet(cr, margin * 1.7, self.height - margin * 2, margin)
         self.__draw_feet(cr, self.width - margin * 1.7, self.height - margin * 2, margin, -1)
@@ -116,20 +118,20 @@ class Player(Node):
 
 
     def __update_pos(self):
-        center_x = self.x + self.parent.cell_size*0.5 - self.parent.map[0][0].x
-        center_y = self.y + self.parent.cell_size*1.5 - self.parent.map[0][0].y
-        self.pos = [int(center_x/self.parent.cell_size), int(center_y/self.parent.cell_size)]
+        center_x = self.x + self.get_cell_size() * 0.5 - self.parent.map[0][0].x
+        center_y = self.y + self.get_cell_size() * 1.5 - self.parent.map[0][0].y
+        self.pos = [int(center_x/self.get_cell_size()), int(center_y/self.get_cell_size())]
 
     def move(self, dir):
         def move_action(self, interval):
             if dir == 'up':
-                self.y -= interval*self.speed*self.parent.cell_size
+                self.y -= interval*self.speed*self.get_cell_size()
             elif dir == 'down':
-                self.y += interval*self.speed*self.parent.cell_size
+                self.y += interval*self.speed*self.get_cell_size()
             elif dir == 'left':
-                self.x -= interval*self.speed*self.parent.cell_size
+                self.x -= interval*self.speed*self.get_cell_size()
             elif dir == 'right':
-                self.x += interval*self.speed*self.parent.cell_size
+                self.x += interval*self.speed*self.get_cell_size()
 
             self.__update_pos()
             return
@@ -351,6 +353,8 @@ class Stage(Node):
         self.map_size = opt['map_size']
         self.margin = opt['margin']
         self.bgimg = opt['bgimg']
+        self.activated = opt['activated']
+        self.deactivated = opt['deactivated']
         self.__update_metrics()
 
         self.map = [ [
@@ -376,7 +380,8 @@ class Stage(Node):
                 {
                     'pos': cell.pos,
                     'img': 'player.png',
-                    'speed': 2.0
+                    'speed': 2.0,
+                    'get_cell_size': lambda: self.cell_size
                     }
                 )
         self.add_node(self.player)
@@ -472,6 +477,36 @@ class Stage(Node):
         self.box.y = rect[1]
         self.box.on_resize(rect[2], rect[3])
 
+    def on_tick(self, interval):
+        if self.activated(100):
+            print self
+        elif self.activated(65361):
+            self.player.stop()
+            self.player.move('left')
+        elif self.activated(65362):
+            self.player.stop()
+            self.player.move('up')
+        elif self.activated(65363):
+            self.player.stop()
+            self.player.move('right')
+        elif self.activated(65364):
+            self.player.stop()
+            self.player.move('down')
+        elif self.deactivated(65361):
+            self.player.stop('left')
+        elif self.deactivated(65362):
+            self.player.stop('up')
+        elif self.deactivated(65363):
+            self.player.stop('right')
+        elif self.deactivated(65364):
+            self.player.stop('down')
+
+        if self.activated(32):
+            self.box.toggle()
+
+        if self.activated(122):
+            self.player.bomb()
+
     def bomb(self, x, y, count, power):
         cell = self.map[x][y]
         bomb = Bomb(
@@ -484,6 +519,27 @@ class Stage(Node):
                     }
                 )
         cell.add_node(bomb)
+
+class MenuScene(Node):
+    def __init__(self, x, y, width, height, opt):
+        Node.__init__(self, x, y, width, height)
+        self.start_game = opt['start game']
+        self.activated = opt['activated']
+        self.deactivated = opt['deactivated']
+        self.on_update()
+
+    def on_update(self):
+        cr = cairo.Context(self.surface)
+        cr.set_source_rgb(0, 0, 0)
+        cr.paint()
+        cr.set_source_rgb(1, 1, 1)
+        cr.set_font_size(60.0)
+        cr.move_to(100, 100)
+        cr.show_text("press space")
+
+    def on_tick(self, interval):
+        if self.activated(32):
+            self.start_game()
 
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0
@@ -512,39 +568,21 @@ class Bomberman(Game):
             'map_size': [16, 16], 
             'margin': [20, 20, 20, 20],
             'bgimg': 'bg.png',
+            'activated': self.activated,
+            'deactivated': self.deactivated
             })
-        Game.__init__(self, 'Bomberman K', stage, 500, 500, 80)
+
+        def start_game():
+            self.top_node=stage
+
+        menu = MenuScene(0, 0, 500, 500, {
+            'activated': self.activated,
+            'deactivated': self.deactivated,
+            'start game': start_game
+            })
+        Game.__init__(self, 'Bomberman K', menu, 500, 500, 80)
 
     def on_tick(self, interval):
-        if self.activated(100):
-            print self.top_node
-        elif self.activated(65361):
-            self.top_node.player.stop()
-            self.top_node.player.move('left')
-        elif self.activated(65362):
-            self.top_node.player.stop()
-            self.top_node.player.move('up')
-        elif self.activated(65363):
-            self.top_node.player.stop()
-            self.top_node.player.move('right')
-        elif self.activated(65364):
-            self.top_node.player.stop()
-            self.top_node.player.move('down')
-        elif self.deactivated(65361):
-            self.top_node.player.stop('left')
-        elif self.deactivated(65362):
-            self.top_node.player.stop('up')
-        elif self.deactivated(65363):
-            self.top_node.player.stop('right')
-        elif self.deactivated(65364):
-            self.top_node.player.stop('down')
-
-        if self.activated(32):
-            self.top_node.box.toggle()
-
-        if self.activated(122):
-            self.top_node.player.bomb()
-        
         print_fps()
 
 if __name__ == '__main__':

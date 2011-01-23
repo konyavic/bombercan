@@ -233,10 +233,10 @@ class Game:
             self.cur_time = last_time
             # handle input and timer events
             self.on_tick(self.interval)
-            # take a snapshot of the lastest state of keymap
-            self.__keymap = self.__next_keymap.copy()
             # handle timer events of nodes
             self.top_node.do_tick_recursive(self.interval)
+            # take a snapshot of the lastest state of keymap
+            self.__keymap = self.__next_keymap.copy()
             # handle frame update
             self.area.queue_draw()
         except KeyboardInterrupt:

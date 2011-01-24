@@ -15,6 +15,10 @@ class Node:
         self.height = height
 
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        self.surface_x = x
+        self.surface_y = y
+        self.surface_width = width
+        self.surface_height = height
 
         self.children = []
         self.parent = None
@@ -26,6 +30,36 @@ class Node:
         self.animated = False
 
         self.scale = 1.0
+
+    def get_x(self):
+        return self.x
+
+    def get_y(self):
+        return self.y
+
+    def get_width(self):
+        return self.width
+
+    def get_height(self):
+        return self.height
+
+    def get_rect(self):
+        return (self.x, self.y, self.width, self.height)
+
+    def create_surface(self, x, y, width, height):
+        del self.surface
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        self.surface_x = x
+        self.surface_y = y
+        self.surface_width = width
+        self.surface_height = height
+
+    def reset_surface(self):
+        self.create_surface(self.x, self.y, self.width, self.height)
+
+    def clean_surface(self):
+        del self.surface
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.surface_width, self.surface_height)
 
     '''
     Functions could be called without restrictions

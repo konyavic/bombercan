@@ -17,7 +17,6 @@ class Player(Node):
         self.pos = opt['pos']
         self.speed = opt['speed']
         self.get_cell_size = opt['get_cell_size']
-        self.state = 'stopped'
         self.on_update()
 
     def __draw_feet(self, cr, x, y, margin, inverse=1):
@@ -107,12 +106,12 @@ class Player(Node):
         cr = cairo.Context(self.surface)
         cr.set_line_join(cairo.LINE_JOIN_ROUND)
         # draw feets
-        self.__draw_feet(cr, margin * 1.7, self.height - margin * 2, margin)
-        self.__draw_feet(cr, self.width - margin * 1.7, self.height - margin * 2, margin, -1)
+        self.__draw_feet(cr, margin * 1.7, self.get_height() - margin * 2, margin)
+        self.__draw_feet(cr, self.get_width() - margin * 1.7, self.get_height() - margin * 2, margin, -1)
         # draw body
-        self.__draw_cylinder(cr, margin, self.height - margin * 2, margin, self.height * 0.3, (0, 0, 0.7))
+        self.__draw_cylinder(cr, margin, self.get_height() - margin * 2, margin, self.get_height() * 0.3, (0, 0, 0.7))
         # draw head
-        self.__draw_cylinder(cr, margin, self.height *0.7 - margin * 2, margin, self.height * 0.2, (0.7, 0.7, 0.7))
+        self.__draw_cylinder(cr, margin, self.get_height() *0.7 - margin * 2, margin, self.get_height() * 0.2, (0.7, 0.7, 0.7))
         # draw eyes
         self.__draw_eyes(cr, margin)
 
@@ -143,23 +142,23 @@ class Player(Node):
             # draw feets
             self.__draw_feet(cr, 
                     margin * 1.7, 
-                    self.height - margin * 2 + margin * 0.5 * math.cos(phase*math.pi*2), 
+                    self.get_height() - margin * 2 + margin * 0.5 * math.cos(phase*math.pi*2), 
                     margin)
             self.__draw_feet(cr, 
-                    self.width - margin * 1.7, 
-                    self.height - margin * 2 - margin * 0.5 * math.cos(phase*math.pi*2), 
+                    self.get_width() - margin * 1.7, 
+                    self.get_height() - margin * 2 - margin * 0.5 * math.cos(phase*math.pi*2), 
                     margin, -1)
             # draw body
-            self.__draw_cylinder(cr, margin, self.height - margin * 2, margin, self.height * 0.3, (0, 0, 0.7))
+            self.__draw_cylinder(cr, margin, self.get_height() - margin * 2, margin, self.get_height() * 0.3, (0, 0, 0.7))
             # draw head
-            self.__draw_cylinder(cr, margin, self.height *0.7 - margin * 2, margin, self.height * 0.2, (0.7, 0.7, 0.7))
+            self.__draw_cylinder(cr, margin, self.get_height() *0.7 - margin * 2, margin, self.get_height() * 0.2, (0.7, 0.7, 0.7))
             # draw eyes
             self.__draw_eyes(cr, margin)
 
             return
 
         self.add_action(dir, move_action, loop=True, update=False)
-        self.add_animation(dir, move_animation, loop=True, delay=0, period=1)
+        self.add_animation(dir, move_animation, loop=True, delay=0, period=0.2)
 
     def stop(self, dir=None):
         if dir:

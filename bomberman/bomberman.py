@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 import math
 import time
@@ -12,6 +13,7 @@ from pnode import Node
 from pnode import Game
 
 from objects import Bomb
+from menuscene import MenuScene
 
 class Player(Node):
     def __init__(self, x, y, width, height, opt):
@@ -493,26 +495,6 @@ class Stage(Node):
         bomb.start_counting()
         cell.add_node(bomb)
 
-class MenuScene(Node):
-    def __init__(self, x, y, width, height, opt):
-        Node.__init__(self, x, y, width, height)
-        self.start_game = opt['start game']
-        self.activated = opt['activated']
-        self.deactivated = opt['deactivated']
-        self.on_update()
-
-    def on_update(self):
-        cr = cairo.Context(self.surface)
-        cr.set_source_rgb(0, 0, 0)
-        cr.paint()
-        cr.set_source_rgb(1, 1, 1)
-        cr.set_font_size(60.0)
-        cr.move_to(100, 100)
-        cr.show_text("press space")
-
-    def on_tick(self, interval):
-        if self.activated(32):
-            self.start_game()
 
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0
@@ -547,6 +529,7 @@ class Bomberman(Game):
 
         def start_game():
             self.top_node=stage
+            stage.on_resize(*self.screen_size)
 
         menu = MenuScene(0, 0, 500, 500, {
             'activated': self.activated,

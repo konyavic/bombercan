@@ -71,8 +71,8 @@ class Bomb(Node):
 
     def start_counting(self):
         def counting_animation(self, phase):
-            self.__scale = 1.5 - 0.5 * math.cos(phase * math.pi * 2)
-            self.create_surface_by_scale(self.__scale)
+            self.__scale = 1.25 - 0.25 * math.cos(phase * math.pi * 2)
+            self.create_surface_by_scale(self.__scale, rel_origin=(0.5, 1))
             cr = cairo.Context(self.surface)
             self.__draw(cr)
 

@@ -49,14 +49,17 @@ class Node:
         self.surface_height = self.height
 
     def create_surface_by_scale(self, scale, rel_origin=(0.5, 0.5)):
-        rx, ry = rel_origin
+        rx = rel_origin[0] * self.width
+        ry = rel_origin[1] * self.height
         new_width = self.width * scale
         new_height = self.height * scale
+        delta_x = rel_origin[0] * new_width
+        delta_y = rel_origin[1] * new_height
         self.create_surface( 
-                int(self.width * rx - new_width / 2 + 0.5),
-                int(self.height * ry - new_height / 2 + 0.5), 
-                int(new_width + 0.5),
-                int(new_height + 0.5)
+                int(rx - delta_x),
+                int(ry - delta_y), 
+                int(new_width),
+                int(new_height)
                 )
 
     def clear_context(self, cr):

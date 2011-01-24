@@ -9,14 +9,17 @@ import cairo
 
 class Node:
     def __init__(self, x, y, width, height):
+        # the following attributeds should be used as read-only variables in subclasses
         self.x = x
         self.y = y
         self.width = width
         self.height = height
 
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
-        self.surface_x = x
-        self.surface_y = y
+        # the following attributes should never be directly accessed, 
+        # except for surface
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        self.surface_x = 0
+        self.surface_y = 0
         self.surface_width = width
         self.surface_height = height
 
@@ -29,23 +32,6 @@ class Node:
         self.animation_remove_list = set()
         self.animated = False
 
-        self.scale = 1.0
-
-    def get_x(self):
-        return self.x
-
-    def get_y(self):
-        return self.y
-
-    def get_width(self):
-        return self.width
-
-    def get_height(self):
-        return self.height
-
-    def get_rect(self):
-        return (self.x, self.y, self.width, self.height)
-
     def create_surface(self, x, y, width, height):
         del self.surface
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
@@ -55,11 +41,29 @@ class Node:
         self.surface_height = height
 
     def reset_surface(self):
-        self.create_surface(self.x, self.y, self.width, self.height)
-
-    def clean_surface(self):
         del self.surface
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.surface_width, self.surface_height)
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        self.surface_x = 0
+        self.surface_y = 0
+        self.surface_width = self.width
+        self.surface_height = self.height
+
+    def create_surface_by_scale(self, scale, rel_origin=(0.5, 0.5)):
+        rx, ry = rel_origin
+        new_width = self.width * scale
+        new_height = self.height * scale
+        self.create_surface( 
+                int(self.width * rx - new_width / 2 + 0.5),
+                int(self.height * ry - new_height / 2 + 0.5), 
+                int(new_width + 0.5),
+                int(new_height + 0.5)
+                )
+
+    def clear_context(self, cr):
+        cr.save()
+        cr.set_operator(cairo.OPERATOR_CLEAR)
+        cr.paint()
+        cr.restore()
 
     '''
     Functions could be called without restrictions
@@ -186,22 +190,14 @@ class Node:
                         current.on_update()
                         break
 
-            if current.scale == 1.0:
-                x, y = x + current.x, y + current.y
-                cr.set_source_surface(current.surface, x, y)
-                cr.paint()
-            else:
-                x, y = (
-                        x / current.scale + current.x - current.width * (1 - 1 / current.scale) * 0.5, 
-                        y / current.scale + current.y - current.height * (1 - 1 / current.scale) * 0.5
-                        )
-                cr.save()
-                cr.scale(current.scale, current.scale)
-                cr.set_source_surface(current.surface, x, y)
-                cr.paint()
-                cr.restore()
+            node_x = x + current.x
+            node_y = y + current.y
+            surface_x = node_x + current.surface_x
+            surface_y = node_y + current.surface_y
+            cr.set_source_surface(current.surface, surface_x, surface_y)
+            cr.paint()
 
-            stack = [(node, x, y) for node in current.children] + stack
+            stack = [(node, node_x, node_y) for node in current.children] + stack
 
     def do_tick_recursive(self, interval):
         queue = [self]

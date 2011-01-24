@@ -42,7 +42,7 @@ class Bomb(Node):
                 0, math.pi * 2)
         cr.set_source_rgb(0.2, 0.2, 0.2)
         cr.fill_preserve()
-        cr.set_line_width(1.5)
+        cr.set_line_width(3)
         cr.set_source_rgb(0, 0, 0)
         cr.stroke()
 
@@ -53,7 +53,7 @@ class Bomb(Node):
                 0, math.pi * 2)
         cr.set_source_rgb(0.2, 0.2, 0.2)
         cr.fill_preserve()
-        cr.set_line_width(1.5)
+        cr.set_line_width(3)
         cr.set_source_rgb(0, 0, 0)
         cr.stroke()
 

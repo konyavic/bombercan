@@ -23,15 +23,16 @@ class Player(Node):
         #get_cell
         self.on_update()
 
-    def __draw_feet(self, cr, x, y, margin, inverse=1):
+    def __draw_feet(self, cr, x, y, inverse=1):
+        width, height = self.width, self.height
         cr.move_to(x, y)
-        cr.rel_line_to(0, margin * 1.3)
-        cr.rel_line_to(-inverse*margin * 0.3, 0)
-        cr.rel_line_to(0, margin * 0.3)
-        cr.rel_line_to(inverse*margin * 1, 0)
-        cr.rel_line_to(0, -margin * 0.3)
-        cr.rel_line_to(-inverse*margin * 0.3, 0)
-        cr.rel_line_to(0, margin * -1.3)
+        cr.rel_line_to(0, height * 0.13)
+        cr.rel_line_to(-(inverse * width * 0.06), 0)
+        cr.rel_line_to(0, height * 0.03)
+        cr.rel_line_to(inverse * width * 0.2, 0)
+        cr.rel_line_to(0, -(height * 0.03))
+        cr.rel_line_to(-(inverse* width * 0.06), 0)
+        cr.rel_line_to(0, -(height * 0.13))
         cr.close_path()
 
         cr.set_source_rgb(0.2, 0.2, 0.2)
@@ -40,45 +41,47 @@ class Player(Node):
         cr.set_line_width(1)
         cr.stroke()
 
-    def __draw_cylinder(self, cr, x, y, margin, height, color):
+    def __draw_cylinder(self, cr, x, y, cylinder_height, color):
+        width, height = self.width, self.height
         cr.move_to(x, y)
         cr.rel_curve_to(
-                (self.width - margin * 2) / 2 - 0.5 * margin, margin * 0.7, 
-                (self.width - margin * 2) / 2 + 0.5 * margin, margin * 0.7, 
-                self.width - margin * 2, 0 
+                width * 0.2, height * 0.07, 
+                width * 0.4, height * 0.07, 
+                width * 0.6, 0 
                 )
-        cr.rel_line_to(0, -height)
+        cr.rel_line_to(0, -cylinder_height)
         cr.rel_curve_to(
-                -(self.width - margin * 2) / 2 + 0.5 * margin, -margin * 0.7, 
-                -(self.width - margin * 2) / 2 - 0.5 * margin, -margin * 0.7, 
-                -(self.width - margin * 2), 0 
+                -(width * 0.2), -(height * 0.07), 
+                -(width * 0.4), -(height * 0.07), 
+                -(width * 0.6), 0 
                 )
         cr.close_path()
 
         cr.set_source_rgb(*color)
         cr.fill_preserve()
         cr.set_source_rgb(0, 0, 0)
-        cr.set_line_width(1)
+        cr.set_line_width(1.5)
         cr.stroke()
 
-        cr.move_to(x, y - height)
+        cr.move_to(x, y - cylinder_height)
         cr.rel_curve_to(
-                (self.width - margin * 2) / 2 - 0.5 * margin, margin * 0.7, 
-                (self.width - margin * 2) / 2 + 0.5 * margin, margin * 0.7, 
-                self.width - margin * 2, 0 
+                width * 0.2, height * 0.07, 
+                width * 0.4, height * 0.07, 
+                width * 0.6, 0 
                 )
 
         cr.set_source_rgb(0, 0, 0)
-        cr.set_line_width(0.8)
+        cr.set_line_width(1)
         cr.stroke()
 
-    def __draw_eyes(self, cr, margin):
+    def __draw_eyes(self, cr):
+        width, height = self.width, self.height
         cr.save()
         cr.scale(1, 0.5)
         cr.arc(
-                margin * 1.9, self.height * 0.5 + margin * 4,
-                margin * 0.5,
-                0, 2*math.pi)
+                width * 0.38, height * 0.9,
+                width * 0.1,
+                0, 2 * math.pi)
         cr.restore()
 
         cr.set_source_rgb(1, 1, 0)
@@ -91,9 +94,9 @@ class Player(Node):
         cr.save()
         cr.scale(1, 0.5)
         cr.arc(
-                self.width - margin * 1.9, self.height * 0.5 + margin * 4,
-                margin * 0.5,
-                0, 2*math.pi)
+                width * (1 - 0.38), height * 0.9,
+                width * 0.1,
+                0, 2 * math.pi)
         cr.restore()
 
         cr.set_source_rgb(1, 1, 0)
@@ -104,21 +107,22 @@ class Player(Node):
         cr.stroke()
 
     def on_update(self):
-        margin = int(self.width * 0.2)
+        width, height = self.width, self.height
 
         cr = cairo.Context(self.surface)
         self.clear_context(cr)
-        cr.set_line_join(cairo.LINE_JOIN_ROUND)
+        cr.save()
+        cr.set_line_join(cairo.LINE_JOIN_BEVEL)
         # draw feets
-        self.__draw_feet(cr, margin * 1.7, self.height - margin * 2, margin)
-        self.__draw_feet(cr, self.width - margin * 1.7, self.height - margin * 2, margin, -1)
+        self.__draw_feet(cr, width * 0.3, height * 0.8)
+        self.__draw_feet(cr, width * (1 - 0.3), height * 0.8, -1)
         # draw body
-        self.__draw_cylinder(cr, margin, self.height - margin * 2, margin, self.height * 0.3, (0, 0, 0.7))
+        self.__draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0, 0, 0.7))
         # draw head
-        self.__draw_cylinder(cr, margin, self.height *0.7 - margin * 2, margin, self.height * 0.2, (0.7, 0.7, 0.7))
+        self.__draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.7, 0.7, 0.7))
         # draw eyes
-        self.__draw_eyes(cr, margin)
-
+        self.__draw_eyes(cr)
+        cr.restore()
 
     def __update_pos(self):
         center_x = self.x + self.get_cell_size() * 0.5 - self.parent.map[0][0].x
@@ -141,24 +145,23 @@ class Player(Node):
             return
 
         def move_animation(self, phase):
-            margin = int(self.width * 0.2)
+            width, height = self.width, self.height
+            delta = height * 0.05 * math.cos(phase * math.pi * 2)
+
             cr = cairo.Context(self.surface)
             self.clear_context(cr)
+            cr.save()
+            cr.set_line_join(cairo.LINE_JOIN_BEVEL)
             # draw feets
-            self.__draw_feet(cr, 
-                    margin * 1.7, 
-                    self.height - margin * 2 + margin * 0.5 * math.cos(phase*math.pi*2), 
-                    margin)
-            self.__draw_feet(cr, 
-                    self.width - margin * 1.7, 
-                    self.height - margin * 2 - margin * 0.5 * math.cos(phase*math.pi*2), 
-                    margin, -1)
+            self.__draw_feet(cr, width * 0.3, height * 0.8 + delta)
+            self.__draw_feet(cr, width * (1 - 0.3), height * 0.8 - delta, -1)
             # draw body
-            self.__draw_cylinder(cr, margin, self.height - margin * 2, margin, self.height * 0.3, (0, 0, 0.7))
+            self.__draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0, 0, 0.7))
             # draw head
-            self.__draw_cylinder(cr, margin, self.height *0.7 - margin * 2, margin, self.height * 0.2, (0.7, 0.7, 0.7))
+            self.__draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.7, 0.7, 0.7))
             # draw eyes
-            self.__draw_eyes(cr, margin)
+            self.__draw_eyes(cr)
+            cr.restore()
 
             return
 

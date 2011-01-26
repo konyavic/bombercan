@@ -9,56 +9,154 @@ import pango
 import pangocairo
 
 from pnode import Node
+from objects import Bomb
+
+class Label(Node):
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
+        self.text = opt['text']
+        self.color = opt['color']
+        if opt.has_key('font'):
+            self.font = opt['font']
+            self.__font = pango.FontDescription(self.font)
+
+        if opt.has_key('bgcolor'):
+            self.bgcolor = opt['bgcolor']
+        else:
+            self.bgcolor = (0, 0, 0, 0)
+
+        self.on_update()
+
+    def set_text(self, text):
+        self.text = text
+        self.on_update()
+
+    def get_size(self):
+        cr = cairo.Context(self.surface)
+        pcr = pangocairo.CairoContext(cr)
+        layout = pcr.create_layout()
+        layout.set_text(self.text)
+        layout.set_font_description(self.__font)
+        return layout.get_pixel_size()
+
+    def on_update(self):
+        size = self.get_size()
+        self.style['width'], self.style['height'] = size
+        self.set_style(self.style)
+        self.reset_surface()
+
+        cr = cairo.Context(self.surface)
+        cr.set_source_rgba(*self.bgcolor)
+        cr.paint()
+
+        cr.set_source_rgba(*self.color)
+        cr.move_to(0, 0)
+        pcr = pangocairo.CairoContext(cr)
+        layout = pcr.create_layout()
+        layout.set_text(self.text)
+        layout.set_font_description(self.__font)
+        pcr.show_layout(layout)
+    
 
 class Selections(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
 
         # input attributes
-        self.num = int(opt['num'])
-        self.font = opt['font'].copy()
-        self.label = [opt['label %d' % i] for i in range(0, self.num)]
+        self.labels = opt['labels']
+        if opt.has_key('font'):
+            self.font = opt['font']
 
-        # private attributes
-        self.__selected = None
+        if opt.has_key('bgcolor'):
+            self.bgcolor = opt['bgcolor']
+        else:
+            self.bgcolor = (0, 0, 0, 0)
+
+        # sub-nodes
+        self.labels = [ Label(
+            parent=self,
+            style={
+                'top': (i + 1) / float(len(self.labels) + 2),
+                'align': 'center'
+                },
+            opt={
+                'text': self.labels[i],
+                'color': (1, 1, 1, 1),
+                'font': self.font
+                }
+            ) for i in range(0, len(self.labels)) ]
+
+        for label in self.labels:
+            self.add_node(label)
+
+        self.curser = Bomb(
+                parent=self,
+                style={
+                    'top': self.labels[0].y,
+                    'left': self.labels[0].x - self.labels[0].height / 2,
+                    'width': self.labels[0].height,
+                    'height': self.labels[0].height,
+                    },
+                opt={
+                    'count': 0,
+                    'power': 0,
+                    'is endless': True,
+                    'explode': None,
+                    'destroy': None
+                    }
+                )
+        self.add_node(self.curser)
+        self.curser.start_counting()
+        self.select(0)
 
         self.on_update()
 
     def on_update(self):
         cr = cairo.Context(self.surface)
-        cr.set_source_rgb(0, 0, 1)
-        cr.paint_with_alpha(0.5)
-        cr.set_source_rgb(1, 1, 1)
-        cr.move_to(10, 10)
-        pcr = pangocairo.CairoContext(cr)
-        layout = pcr.create_layout()
+        cr.set_source_rgba(*self.bgcolor)
+        cr.paint()
 
-        layout.set_text(u"スペースキーを押してくだし")
-        size = layout.get_pixel_size()
-        self.font.set_absolute_size(size[1] * float(self.width / size[0]) * pango.SCALE)
-        layout.set_font_description(self.font)
-        size = layout.get_pixel_size()
-        cr.move_to((self.width - size[0]) / 2, (self.height / 3) - (size[1] / 2))
-        pcr.show_layout(layout)
+    def on_resize(self):
+        Node.on_resize(self)
+        self.labels[self.selected].on_resize()
+        self.select(self.selected)
 
     def select(self, i):
-        self.__selected = i
+        self.selected = i
+        self.curser.set_style({
+            'top': self.labels[i].y,
+            'left': self.labels[i].x - self.labels[i].height,
+            'width': self.labels[i].height,
+            'height': self.labels[i].height,
+            })
 
+    def select_up(self):
+        i = self.selected - 1
+        if i < 0:
+            i = len(self.labels) - 1
+
+        self.select(i)
+
+    def select_down(self):
+        i = self.selected + 1
+        if i >= len(self.labels):
+            i = 0
+
+        self.select(i)
 
 class MenuScene(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
+
+        self.bgimg = opt['bgimg']
 
         # dependent functions
         self.start_game = opt['start game']
         self.activated = opt['activated']
         self.deactivated = opt['deactivated']
 
-        # private attributes
-        self.__font = pango.FontDescription("Meiryo, MS Gothic")
-
         # sub-nodes
-        sel = Selections(
+        self.sel = Selections(
                 parent=self,
                 style={
                     'left': 0.25, 
@@ -67,33 +165,57 @@ class MenuScene(Node):
                     'height': 0.3
                     },
                 opt={
-                    'num': 1,
-                    'font': self.__font,
-                    'label 0': u"test"
+                    'font': 'Meiryo, MS Gothic 18',
+                    'labels': [u'スタート', u'オプション', u'（゜д゜;;'],
+                    'bgcolor': (0.3, 0.3, 0.7, 0.7)
                     }
                 )
-        self.add_node(sel)
+        self.add_node(self.sel)
 
+        text = Label(
+                parent=self,
+                style={
+                    'top': 0.3,
+                    'align': 'center'
+                    },
+                opt={
+                    'text': u'ボン・バーマン',
+                    'font': 'Meiryo, MS Gothic bold 30',
+                    'color': (1, 1, 0.3, 1),
+                    }
+                )
+        self.add_node(text)
+
+        self.texture = {}
+        self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
         self.on_update()
 
     def on_update(self):
+        scale_width = self.width / float(self.texture['bgimg'].get_width())
+        scale_height = self.height / float(self.texture['bgimg'].get_height())
+        if scale_width < scale_height:
+            scale = scale_height
+        else:
+            scale = scale_width
+
+        new_width = self.texture['bgimg'].get_width()*scale
+        new_height = self.texture['bgimg'].get_height()*scale
+        x = (self.width - new_width)/2
+        y = (self.height - new_height)/2
+
         cr = cairo.Context(self.surface)
+        cr.scale(scale, scale)
         cr.set_source_rgb(0, 0, 0)
         cr.paint()
-        cr.set_source_rgb(1, 1, 1)
-
-        pcr = pangocairo.CairoContext(cr)
-        layout = pcr.create_layout()
-
-        layout.set_text(u"乾電池ボンバーマン")
-        size = layout.get_pixel_size()
-        self.__font.set_absolute_size(size[1] * float(self.width / size[0]) * pango.SCALE)
-        layout.set_font_description(self.__font)
-        size = layout.get_pixel_size()
-        cr.move_to((self.width - size[0]) / 2, (self.height / 3) - (size[1] / 2))
-        pcr.show_layout(layout)
+        cr.set_source_surface(self.texture['bgimg'], x, y)
+        cr.paint_with_alpha(0.7)
 
     def on_tick(self, interval):
+        if self.activated(65362):
+            self.sel.select_up()
+        elif self.activated(65364):
+            self.sel.select_down()
+
         if self.activated(32):
             self.start_game()
 

@@ -370,8 +370,8 @@ class Stage(Node):
         self.box = MessageBox(
                 parent=self, 
                 style={
-                    'width': 0.8,
-                    'height': 0.3,
+                    'width': '80%',
+                    'height': '33%',
                     'align': 'center',
                     'vertical-align': 'center'
                     },
@@ -425,7 +425,7 @@ class Stage(Node):
         cr.set_source_rgb(0, 0, 0)
         cr.paint()
         cr.set_source_surface(self.texture['bgimg'], x, y)
-        cr.paint_with_alpha(0.5)
+        cr.paint_with_alpha(0.7)
 
     def on_resize(self):
         old_cell_size, old_top, old_left = self.cell_size, self.top, self.left
@@ -519,7 +519,7 @@ def print_fps():
 
 class Bomberman(Game):
     def __init__(self):
-        Game.__init__(self, 'Bomberman K', 500, 500, 80)
+        Game.__init__(self, 'Bomberman', 500, 500, 80)
 
         stage = Stage(
                 parent=self,
@@ -527,7 +527,7 @@ class Bomberman(Game):
                 opt={
                     'map_size': [15, 15], 
                     'margin': [20, 20, 20, 20],
-                    'bgimg': 'bg.png',
+                    'bgimg': 'stage_bg.png',
                     'activated': self.activated,
                     'deactivated': self.deactivated
                     }
@@ -541,6 +541,7 @@ class Bomberman(Game):
                 parent=self,
                 style={},
                 opt={
+                    'bgimg': 'menu_bg.png',
                     'activated': self.activated,
                     'deactivated': self.deactivated,
                     'start game': start_game

@@ -17,6 +17,7 @@ setup(
                 }
             },
         data_files = [
-            'bg.png',
+            'stage_bg.png',
+            'menu_bg.png'
             ]
         )

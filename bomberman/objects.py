@@ -10,8 +10,8 @@ import cairo
 from pnode import Node
 
 class Bomb(Node):
-    def __init__(self, x, y, width, height, opt):
-        Node.__init__(self, x, y, width, height)
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
 
         # input attributes
         self.count = float(opt['count'])

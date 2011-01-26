@@ -16,8 +16,8 @@ from objects import Bomb
 from menuscene import MenuScene
 
 class Player(Node):
-    def __init__(self, x, y, width, height, opt):
-        Node.__init__(self, x, y, width, height)
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
         self.pos = opt['pos']
         self.speed = opt['speed']
         self.get_cell_size = opt['get_cell_size']
@@ -183,8 +183,8 @@ class Player(Node):
         self.parent.bomb(self.pos[0], self.pos[1], 5, 3)
 
 class Cell(Node):
-    def __init__(self, x, y, width, height, opt):
-        Node.__init__(self, x, y, width, height)
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
         self.pos = opt['pos']
         self.lighted = False
         self.on_update()
@@ -193,8 +193,8 @@ class Cell(Node):
         return '.'
     
     def __draw_simple_pattern(self, color):
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
         cr = cairo.Context(self.surface)
+        self.clear_context(cr)
         
         cr.set_line_width(2)
         cr.set_source_rgba(*color)
@@ -207,11 +207,6 @@ class Cell(Node):
     def on_update(self):
         self.color = (0.5, 0.5, 1, 0.7)
         self.__draw_simple_pattern(self.color)
-
-    def on_resize(self, width, height):
-        Node.on_resize(self, width, height)
-        for node in self.children:
-            node.on_resize(width, height)
 
     def on_tick(self, interval):
         if self.parent.player.pos == self.pos and self.lighted == False:
@@ -247,8 +242,8 @@ class Cell(Node):
             self.add_animation('fade out', fade_out_animation, delay=0, period=1, loop=False)
 
 class MessageBox(Node):
-    def __init__(self, x, y, width, height, opt):
-        Node.__init__(self, x, y, width, height)
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
         self.showing = False
         self.on_update()
 
@@ -290,8 +285,8 @@ class MessageBox(Node):
             self.show(True)
 
 class ExplodeEffect(Node):
-    def __init__(self, x, y, width, height, opt):
-        Node.__init__(self, x, y, width, height)
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
 
         def explode_animation(self, phase):
             self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
@@ -305,22 +300,25 @@ class ExplodeEffect(Node):
         self.add_animation('explode', explode_animation, loop=False, delay=0, period=1, cleanup=explode_cleanup)
 
 class MapEffectLayer(Node):
-    def __init__(self, x, y, width, height, opt):
-        Node.__init__(self, x, y, width, height)
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
 
     def explode(self, x, y, power):
         cell = self.parent.map[x][y]
         self.add_node( ExplodeEffect(
-            cell.x - power * self.parent.cell_size,
-            cell.y - power * self.parent.cell_size,
-            (power * 2 + 1) * self.parent.cell_size,
-            (power * 2 + 1) * self.parent.cell_size,
+            parent=self,
+            style={
+                'left': cell.x - power * self.parent.cell_size,
+                'top': cell.y - power * self.parent.cell_size,
+                'width': (power * 2 + 1) * self.parent.cell_size,
+                'height': (power * 2 + 1) * self.parent.cell_size,
+                },
             opt=None
             ))
 
 class Stage(Node):
-    def __init__(self, x, y, width, height, opt):
-        Node.__init__(self, x, y, width, height)
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
         self.map_size = opt['map_size']
         self.margin = opt['margin']
         self.bgimg = opt['bgimg']
@@ -330,11 +328,14 @@ class Stage(Node):
 
         self.map = [ [
             Cell(
-                self.__get_cell_pos(x, y)[0],
-                self.__get_cell_pos(x, y)[1],
-                self.cell_size, 
-                self.cell_size, 
-                {'pos':[x, y]}
+                parent=self,
+                style={
+                    'left': self.__get_cell_pos(x, y)[0],
+                    'top': self.__get_cell_pos(x, y)[1],
+                    'width': self.cell_size, 
+                    'height': self.cell_size, 
+                    },
+                opt={'pos':[x, y]}
                 )
             for y in xrange(0, self.map_size[1]) ] for x in xrange(0, self.map_size[0]) ]
 
@@ -344,11 +345,14 @@ class Stage(Node):
 
         cell = self.map[0][0]
         self.player = Player(
-                cell.x,
-                cell.y - self.cell_size,
-                self.cell_size, 
-                self.cell_size*2, 
-                {
+                parent=self,
+                style={
+                    'left': cell.x,
+                    'top': cell.y - self.cell_size,
+                    'width': self.cell_size, 
+                    'height': self.cell_size*2, 
+                    },
+                opt={
                     'pos': cell.pos,
                     'img': 'player.png',
                     'speed': 2.0,
@@ -360,12 +364,18 @@ class Stage(Node):
         self.characters.append(self.player)
 
         cell = self.map[0][0]
-        self.effect = MapEffectLayer(
-                0, 0, self.width, self.height, opt=None)
+        self.effect = MapEffectLayer(parent=self, style={}, opt=None)
         self.add_node(self.effect)
 
-        rect = self.__get_box()
-        self.box = MessageBox(*rect, opt=None)
+        self.box = MessageBox(
+                parent=self, 
+                style={
+                    'bottom': 10,
+                    'left': 10,
+                    'right': 10,
+                    'height': 0.3
+                    },
+                opt=None)
         self.add_node(self.box)
 
         self.texture = {}
@@ -385,7 +395,7 @@ class Stage(Node):
             str += '\n'
 
         return str
-
+    
     def __update_metrics(self):
         self.cell_size = min(
                 (self.width - self.margin[1] - self.margin[3])/self.map_size[0], 
@@ -396,15 +406,6 @@ class Stage(Node):
 
     def __get_cell_pos(self, x, y):
         return (self.left + self.cell_size*x, self.top + self.cell_size*y)
-
-    def __get_box(self):
-        height = max(150, (self.height - self.margin[0] - self.margin[2]) / 3)
-        return (
-                self.margin[3], 
-                self.height - self.margin[2] - height, 
-                self.width - self.margin[1] - self.margin[3],
-                height
-                )
 
     def on_update(self):
         scale_width = self.width / float(self.texture['bgimg'].get_width())
@@ -426,27 +427,29 @@ class Stage(Node):
         cr.set_source_surface(self.texture['bgimg'], x, y)
         cr.paint_with_alpha(0.5)
 
-    def on_resize(self, width, height):
+    def on_resize(self):
         old_cell_size, old_top, old_left = self.cell_size, self.top, self.left
 
-        Node.on_resize(self, width, height)
+        Node.on_resize(self)
         self.__update_metrics()
 
         for x, row in enumerate(self.map):
             for y, cell in enumerate(row):
-                cell.x, cell.y = self.__get_cell_pos(x, y)
-                cell.on_resize(self.cell_size, self.cell_size)
+                cell.set_style({
+                    'left': self.__get_cell_pos(x, y)[0],
+                    'top': self.__get_cell_pos(x, y)[1],
+                    'width': self.cell_size, 
+                    'height': self.cell_size
+                    })
 
         ratio = float(self.cell_size) / old_cell_size
         for c in self.characters:
-            c.x = (c.x - old_left) * ratio + self.left
-            c.y = (c.y - old_top) * ratio + self.top
-            c.on_resize(int(c.width * ratio), int(c.height * ratio))
-
-        rect = self.__get_box()
-        self.box.x = rect[0]
-        self.box.y = rect[1]
-        self.box.on_resize(rect[2], rect[3])
+            c.set_style({
+                'left': int((c.x - old_left) * ratio + self.left),
+                'top': int((c.y - old_top) * ratio + self.top),
+                'width': int(c.width * ratio),
+                'height': int(c.height * ratio)
+                })
 
     def on_tick(self, interval):
         if self.activated(100):
@@ -480,12 +483,15 @@ class Stage(Node):
 
     def bomb(self, x, y, count, power):
         cell = self.map[x][y]
-        import sys
         bomb = Bomb(
-                0, 0,
-                self.cell_size, 
-                self.cell_size, 
-                {
+                parent=self,
+                style={
+                    'left': 0,
+                    'top': 0,
+                    'width': self.cell_size, 
+                    'height': self.cell_size
+                    },
+                opt={
                     'count': count,
                     'power': power,
                     'destroy': lambda node: cell.remove_node(node),
@@ -494,7 +500,6 @@ class Stage(Node):
                 )
         bomb.start_counting()
         cell.add_node(bomb)
-
 
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0
@@ -519,24 +524,34 @@ def print_fps():
 
 class Bomberman(Game):
     def __init__(self):
-        stage = Stage(0, 0, 500, 500, {
-            'map_size': [16, 16], 
-            'margin': [20, 20, 20, 20],
-            'bgimg': 'bg.png',
-            'activated': self.activated,
-            'deactivated': self.deactivated
-            })
+        Game.__init__(self, 'Bomberman K', 500, 500, 80)
+
+        stage = Stage(
+                parent=self,
+                style={},
+                opt={
+                    'map_size': [16, 16], 
+                    'margin': [20, 20, 20, 20],
+                    'bgimg': 'bg.png',
+                    'activated': self.activated,
+                    'deactivated': self.deactivated
+                    }
+                )
 
         def start_game():
             self.top_node=stage
-            stage.on_resize(*self.screen_size)
+            self.top_node.do_resize_recursive()
 
-        menu = MenuScene(0, 0, 500, 500, {
-            'activated': self.activated,
-            'deactivated': self.deactivated,
-            'start game': start_game
-            })
-        Game.__init__(self, 'Bomberman K', menu, 500, 500, 80)
+        menu = MenuScene(
+                parent=self,
+                style={},
+                opt={
+                    'activated': self.activated,
+                    'deactivated': self.deactivated,
+                    'start game': start_game
+                    }
+                )
+        self.top_node = menu
 
     def on_tick(self, interval):
         print_fps()

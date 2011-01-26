@@ -7,33 +7,105 @@ import gtk.gdk as gdk
 import gobject
 import cairo
 
+__style_key = ['width', 'height', 'left', 'top', 'right', 'bottom', 'aspect', 'align', 'vertical-align']
+__style_key_prio = dict([(__style_key[i], i) for i in range(0, len(__style_key))])
+
+def style_key_prio(key):
+    if key in __style_key:
+        return __style_key_prio[key]
+    else:
+        return len(__style_key)
+
+def parse_value(value, rel):
+    if value.__class__ is int:
+        return int(value)
+    elif value.__class__ is float:
+        return int(rel * value)
+    elif value.__class__ is str:
+        value = value.strip()
+        if value[-1] is '%':
+            return int(rel * float(value[0:-1]) / 100)
+
+        raise ValueError
+
+def evaluate_style(node, style):
+    # defaults
+    node.x = 0
+    node.y = 0
+    node.width = node.parent.width
+    node.height = node.parent.height
+
+    # parse style
+    has_width = False
+    has_height = False
+    keys = style.keys()
+    keys.sort(key=style_key_prio)
+    for k in keys:
+        value = style[k]
+        if k is 'width':
+            node.width = parse_value(value, node.parent.width)
+            has_width = True
+        elif k is 'height':
+            node.height = parse_value(value, node.parent.height)
+            has_height = True
+        elif k is 'left':
+            node.x = parse_value(value, node.parent.width)
+        elif k is 'top':
+            node.y = parse_value(value, node.parent.height)
+        elif k is 'right':
+            if has_width:
+                node.x = node.parent.width - node.width - parse_value(value, node.parent.width)
+            else:
+                node.width = node.parent.width - node.x - parse_value(value, node.parent.width)
+
+        elif k is 'bottom':
+            if has_height:
+                node.y = node.parent.height - node.height - parse_value(value, node.parent.height)
+            else:
+                node.height = node.parent.height - node.y - parse_value(value, node.parent.height)
+
+        elif k is 'aspect':
+            ratio = float(value)    # width / height
+            if ratio > 1.0:
+                node.height = node.width / ratio
+            else:
+                node.width = node.height * ratio
+
+        elif k is 'align':
+            if value is 'center':
+                node.x = (node.parent.width - node.width) / 2
+            elif value is 'left':
+                node.x = 0
+            elif value is 'right':
+                node.x = node.parent.width - node.width
+
+        elif k is 'vertical-align':
+            if value is 'center':
+                node.x = (node.parent.width - node.width) / 2
+            elif value is 'top':
+                node.y = 0
+            elif value is 'bottom':
+                node.y = node.parent.width - node.width
+
 class Node:
-    def __init__(self, x, y, width, height):
-        # the following attributeds should be used as read-only variables in subclasses
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
+    def __init__(self, parent, style):
+        self.children = []
+        self.parent = parent
+        self.set_style(style)
+        self.reset_surface()
 
         # the following attributes should never be directly accessed, 
-        # except for surface
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
-        self.surface_x = 0
-        self.surface_y = 0
-        self.surface_width = width
-        self.surface_height = height
-
-        self.children = []
-        self.parent = None
-
         self.action_list = {}
         self.action_remove_list = set()
         self.animation_list = {}
         self.animation_remove_list = set()
         self.animated = False
 
+    def set_style(self, style):
+        self.style = style
+        evaluate_style(self, style)
+
     def create_surface(self, x, y, width, height):
-        del self.surface
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
         self.surface_x = x
         self.surface_y = y
@@ -41,7 +113,6 @@ class Node:
         self.surface_height = height
 
     def reset_surface(self):
-        del self.surface
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
         self.surface_x = 0
         self.surface_y = 0
@@ -127,11 +198,9 @@ class Node:
     def on_update(self):
         pass
 
-    # on_resize could be recursive because it is not a heavily-happening event
-    def on_resize(self, width, height):
-        self.width = width
-        self.height = height
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+    def on_resize(self):
+        evaluate_style(self, self.style)
+        self.reset_surface()
         self.on_update()
 
     def on_tick(self, interval):
@@ -193,12 +262,13 @@ class Node:
                         current.on_update()
                         break
 
-            node_x = x + current.x
-            node_y = y + current.y
-            surface_x = node_x + current.surface_x
-            surface_y = node_y + current.surface_y
-            cr.set_source_surface(current.surface, surface_x, surface_y)
-            cr.paint()
+            if current.surface:
+                node_x = x + current.x
+                node_y = y + current.y
+                surface_x = node_x + current.surface_x
+                surface_y = node_y + current.surface_y
+                cr.set_source_surface(current.surface, surface_x, surface_y)
+                cr.paint()
 
             stack = [(node, node_x, node_y) for node in current.children] + stack
 
@@ -219,19 +289,31 @@ class Node:
             # actual removal of done actions
             current.__remove_actions()
 
-            for nodes in current.children:
-                queue.append(nodes)
+            for node in current.children:
+                queue.append(node)
+
+    def do_resize_recursive(self):
+        queue = [self]
+        while queue:
+            current = queue.pop(0)
+            current.on_resize()
+            for node in current.children:
+                queue.append(node)
 
 class Game:
-    def __init__(self, title, top_node, screen_x, screen_y, fps):
+    def __init__(self, title, width, height, fps):
         self.title = title
-        self.top_node = top_node
-        self.screen_size = [int(screen_x), int(screen_y)]
+        self.screen_size = [width, height]
         self.timer_interval = int(1000.0/fps)
+
+        self.top_node = None
 
         self.__quit = False
         self.__keymap = set()
         self.__next_keymap = set()
+
+        self.width = width
+        self.height = height
 
     def quit(self):
         self.__quit = True
@@ -290,8 +372,9 @@ class Game:
         return True
 
     def do_resize(self, widget, allocation):
-        self.screen_size = [allocation.width, allocation.height]
-        self.top_node.on_resize(*self.screen_size)
+        self.width = allocation.width
+        self.height = allocation.height
+        self.top_node.do_resize_recursive()
 
     def run(self):
         self.cur_time = time.time()

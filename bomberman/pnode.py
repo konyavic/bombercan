@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 import time
 
@@ -25,8 +26,8 @@ def parse_value(value, rel):
         value = value.strip()
         if value[-1] is '%':
             return int(rel * float(value[0:-1]) / 100)
-
-        raise ValueError
+        else:
+            return value
 
 def evaluate_style(node, style):
     # defaults
@@ -42,50 +43,50 @@ def evaluate_style(node, style):
     keys.sort(key=style_key_prio)
     for k in keys:
         value = style[k]
-        if k is 'width':
+        if k == 'width':
             node.width = parse_value(value, node.parent.width)
             has_width = True
-        elif k is 'height':
+        elif k == 'height':
             node.height = parse_value(value, node.parent.height)
             has_height = True
-        elif k is 'left':
+        elif k == 'left':
             node.x = parse_value(value, node.parent.width)
-        elif k is 'top':
+        elif k == 'top':
             node.y = parse_value(value, node.parent.height)
-        elif k is 'right':
+        elif k == 'right':
             if has_width:
                 node.x = node.parent.width - node.width - parse_value(value, node.parent.width)
             else:
                 node.width = node.parent.width - node.x - parse_value(value, node.parent.width)
 
-        elif k is 'bottom':
+        elif k == 'bottom':
             if has_height:
                 node.y = node.parent.height - node.height - parse_value(value, node.parent.height)
             else:
                 node.height = node.parent.height - node.y - parse_value(value, node.parent.height)
 
-        elif k is 'aspect':
+        elif k == 'aspect':
             ratio = float(value)    # width / height
             if ratio > 1.0:
                 node.height = node.width / ratio
             else:
                 node.width = node.height * ratio
 
-        elif k is 'align':
-            if value is 'center':
+        elif k == 'align':
+            if value == 'center':
                 node.x = (node.parent.width - node.width) / 2
-            elif value is 'left':
+            elif value == 'left':
                 node.x = 0
-            elif value is 'right':
+            elif value == 'right':
                 node.x = node.parent.width - node.width
 
-        elif k is 'vertical-align':
-            if value is 'center':
-                node.x = (node.parent.width - node.width) / 2
-            elif value is 'top':
+        elif k == 'vertical-align':
+            if value == 'center':
+                node.y = (node.parent.height - node.height) / 2
+            elif value == 'top':
                 node.y = 0
-            elif value is 'bottom':
-                node.y = node.parent.width - node.width
+            elif value == 'bottom':
+                node.y = node.parent.height - node.height
 
 class Node:
     def __init__(self, parent, style):

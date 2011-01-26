@@ -370,10 +370,10 @@ class Stage(Node):
         self.box = MessageBox(
                 parent=self, 
                 style={
-                    'bottom': 10,
-                    'left': 10,
-                    'right': 10,
-                    'height': 0.3
+                    'width': 0.8,
+                    'height': 0.3,
+                    'align': 'center',
+                    'vertical-align': 'center'
                     },
                 opt=None)
         self.add_node(self.box)
@@ -484,13 +484,8 @@ class Stage(Node):
     def bomb(self, x, y, count, power):
         cell = self.map[x][y]
         bomb = Bomb(
-                parent=self,
-                style={
-                    'left': 0,
-                    'top': 0,
-                    'width': self.cell_size, 
-                    'height': self.cell_size
-                    },
+                parent=cell,
+                style={},
                 opt={
                     'count': count,
                     'power': power,
@@ -530,7 +525,7 @@ class Bomberman(Game):
                 parent=self,
                 style={},
                 opt={
-                    'map_size': [16, 16], 
+                    'map_size': [15, 15], 
                     'margin': [20, 20, 20, 20],
                     'bgimg': 'bg.png',
                     'activated': self.activated,

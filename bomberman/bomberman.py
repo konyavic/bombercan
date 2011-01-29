@@ -316,6 +316,91 @@ class MapEffectLayer(Node):
             opt=None
             ))
 
+class MapContainer(Node):
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
+
+        # input attributes
+        self.map_size = opt['map_size']
+
+        # private attributes
+        self.__map = [[ [] for y in xrange(0, self.map_size[1]) ] for x in xrange(0, self.map_size[0]) ]
+        self.__delta = {}
+        self.__cell_size = min(self.width / self.map_size[0], self.height / self.map_size[1])
+
+    def on_resize(self):
+        old_cell_size = self.__cell_size
+        Node.on_resize(self)
+        self.__cell_size = min(self.width / self.map_size[0], self.height / self.map_size[1])
+        ratio = float(self.__cell_size) / old_cell_size
+
+        for x, row in enumerate(self.__map):
+            for y, cell in enumerate(row):
+                pos = self.get_cell_pos(x, y)
+                for node in cell:
+                    dx, dy = self.__delta[node]
+                    new_width = int(node.width * ratio)
+                    new_height = int(node.height * ratio)
+                    style = {
+                        'left': pos[0] + dx,
+                        'top': pos[1] + dy,
+                        'width': new_width,
+                        'height': new_height
+                        }
+                    node.set_style(style)
+                    node.reset_surface()
+                    node.on_update()
+    
+    def get_cell_size(self):
+        return self.__cell_size
+
+    def add_node(self, node, x, y, dx=0, dy=0):
+        Node.add_node(self, node)
+        self.__map[x][y].append(node)
+        self.__delta[node] = (dx, dy)
+
+        pos = self.get_cell_pos(x, y)
+        style = {
+                'left': pos[0] + dx,
+                'top': pos[1] + dy,
+                'width': node.width,
+                'height': node.height
+                }
+        node.set_style(style)
+
+    def remove_node(self, node):
+        Node.remove_node(self, node)
+        self.get_cell(node).remove(node)
+        del self.__delta[node]
+
+    def get_cell(self, node):
+        for x, row in enumerate(self.__map):
+            for y, cell in enumerate(row):
+                if node in cell:
+                    return (x, y)
+
+        return None
+
+    def move_to(self, node, x, y):
+        self.get_cell(node).remove(node)
+        self.__map[x][y].append(node)
+
+        pos = self.get_cell_pos(x, y)
+        dx, dy = self.__delta[node]
+        style = {
+                'left': pos[0] + dx,
+                'top': pos[1] + dy,
+                'width': node.width,
+                'height': node.height
+                }
+        node.set_style(style)
+
+    def get_cell_pos(self, x, y):
+        return (x * self.__cell_size, y * self.__cell_size)
+
+    def get_node_pos(self, node):
+        return self.get_cell_pos(*self.get_cell(node))
+
 class Stage(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
@@ -377,6 +462,56 @@ class Stage(Node):
                     },
                 opt=None)
         self.add_node(self.box)
+
+        mapcon = MapContainer(
+                parent=self,
+                style={
+                    'top': self.margin[0],
+                    'right': self.margin[1],
+                    'bottom': self.margin[2],
+                    'left': self.margin[3],
+                    'aspect': 1,
+                    'align': 'center',
+                    'vertical-align': 'center'
+                    },
+                opt={
+                    'map_size': self.map_size
+                    }
+                )
+        self.add_node(mapcon)
+        tmpbomb1 = Bomb(
+                parent=mapcon,
+                style={
+                    'width': mapcon.get_cell_size(),
+                    'height': mapcon.get_cell_size(),
+                    },
+                opt={
+                    'count': 0,
+                    'power': 0,
+                    'is endless': True,
+                    'explode': None,
+                    'destroy': None
+                    }
+                )
+        tmpbomb2 = Bomb(
+                parent=mapcon,
+                style={
+                    'width': mapcon.get_cell_size(),
+                    'height': mapcon.get_cell_size(),
+                    },
+                opt={
+                    'count': 0,
+                    'power': 0,
+                    'is endless': True,
+                    'explode': None,
+                    'destroy': None
+                    }
+                )
+        mapcon.add_node(tmpbomb1, 0, 0)
+        mapcon.add_node(tmpbomb2, 1, 1)
+        print tmpbomb1.x, tmpbomb1.y
+        print tmpbomb2.x, tmpbomb2.y
+        print mapcon.children
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)

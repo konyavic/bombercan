@@ -68,9 +68,9 @@ def evaluate_style(node, style):
         elif k == 'aspect':
             ratio = float(value)    # width / height
             if ratio > 1.0:
-                node.height = node.width / ratio
+                node.height = int(node.width / ratio)
             else:
-                node.width = node.height * ratio
+                node.width = int(node.height * ratio)
 
         elif k == 'align':
             if value == 'center':

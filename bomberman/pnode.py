@@ -18,16 +18,14 @@ def style_key_prio(key):
         return len(__style_key)
 
 def parse_value(value, rel):
-    if value.__class__ is int:
-        return int(value)
-    elif value.__class__ is float:
-        return int(rel * value)
-    elif value.__class__ is str:
+    if value.__class__ is str:
         value = value.strip()
         if value[-1] is '%':
             return int(rel * float(value[0:-1]) / 100)
         else:
             return value
+    else:
+        return value
 
 def evaluate_style(node, style):
     # defaults
@@ -67,14 +65,17 @@ def evaluate_style(node, style):
 
         elif k == 'aspect':
             ratio = float(value)    # width / height
-            if ratio > 1.0:
-                node.height = int(node.width / ratio)
+            if ratio == 1.0:
+                minimum = min(node.height, node.width)
+                node.height, node.width = minimum, minimum
+            elif ratio > 1.0:
+                node.height = node.width / ratio
             else:
-                node.width = int(node.height * ratio)
+                node.width = node.height * ratio
 
         elif k == 'align':
             if value == 'center':
-                node.x = (node.parent.width - node.width) / 2
+                node.x = (node.parent.width - node.width) / 2.0
             elif value == 'left':
                 node.x = 0
             elif value == 'right':
@@ -82,7 +83,7 @@ def evaluate_style(node, style):
 
         elif k == 'vertical-align':
             if value == 'center':
-                node.y = (node.parent.height - node.height) / 2
+                node.y = (node.parent.height - node.height) / 2.0
             elif value == 'top':
                 node.y = 0
             elif value == 'bottom':
@@ -107,14 +108,14 @@ class Node:
         evaluate_style(self, style)
 
     def create_surface(self, x, y, width, height):
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(width), int(height))
         self.surface_x = x
         self.surface_y = y
         self.surface_width = width
         self.surface_height = height
 
     def reset_surface(self):
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(self.width), int(self.height))
         self.surface_x = 0
         self.surface_y = 0
         self.surface_width = self.width
@@ -128,10 +129,10 @@ class Node:
         delta_x = rel_origin[0] * new_width
         delta_y = rel_origin[1] * new_height
         self.create_surface( 
-                int(rx - delta_x),
-                int(ry - delta_y), 
-                int(new_width),
-                int(new_height)
+                rx - delta_x,
+                ry - delta_y, 
+                new_width,
+                new_height
                 )
 
     def clear_context(self, cr):

@@ -18,11 +18,10 @@ from menuscene import MenuScene
 class Player(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
-        self.pos = opt['pos']
         self.speed = opt['speed']
+        self.do_move = opt['move']
+        self.do_bomb = opt['bomb']
         self.get_cell_size = opt['get_cell_size']
-        #get_pos
-        #get_cell
         self.on_update()
 
     def __draw_feet(self, cr, x, y, inverse=1):
@@ -126,25 +125,17 @@ class Player(Node):
         self.__draw_eyes(cr)
         cr.restore()
 
-    def __update_pos(self):
-        center_x = self.x + self.get_cell_size() * 0.5 - self.parent.map[0][0].x
-        center_y = self.y + self.get_cell_size() * 1.5 - self.parent.map[0][0].y
-        self.pos = [int(center_x/self.get_cell_size()), int(center_y/self.get_cell_size())]
-
     def move(self, dir):
         def move_action(self, interval):
             delta = interval * self.speed * self.get_cell_size()
             if dir == 'up':
-                self.y -= delta
+                self.do_move(self, 0, -delta)
             elif dir == 'down':
-                self.y += delta
+                self.do_move(self, 0, delta)
             elif dir == 'left':
-                self.x -= delta
+                self.do_move(self, -delta, 0)
             elif dir == 'right':
-                self.x += delta
-
-            self.__update_pos()
-            return
+                self.do_move(self, delta, 0)
 
         def move_animation(self, phase):
             width, height = self.width, self.height
@@ -165,8 +156,6 @@ class Player(Node):
             self.__draw_eyes(cr)
             cr.restore()
 
-            return
-
         self.add_action(dir, move_action, loop=True, update=False)
         self.add_animation(dir, move_animation, loop=True, delay=0, period=0.2)
 
@@ -180,18 +169,17 @@ class Player(Node):
                 self.remove_animation(dir)
 
     def bomb(self):
-        self.parent.bomb(self.pos[0], self.pos[1], 5, 3)
+        self.do_bomb(self, 5, 3)
 
-class Cell(Node):
+class Floor(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
-        self.pos = opt['pos']
+        
+        self.should_light = opt['should_light']
+
         self.lighted = False
         self.on_update()
 
-    def __repr__(self):
-        return '.'
-    
     def __draw_simple_pattern(self, color):
         cr = cairo.Context(self.surface)
         self.clear_context(cr)
@@ -209,12 +197,12 @@ class Cell(Node):
         self.__draw_simple_pattern(self.color)
 
     def on_tick(self, interval):
-        if self.parent.player.pos == self.pos and self.lighted == False:
+        if self.should_light(self) and not self.lighted:
             self.light(True)
             self.lighted = True
-        elif self.parent.player.pos != self.pos and self.lighted == True:
+        elif not self.should_light(self) and self.lighted:
             self.light(False)
-            self.lighted = False
+            self.lighted = False 
 
     def light(self, b):
         def blink_animation(self, phase):
@@ -326,28 +314,57 @@ class MapContainer(Node):
         # private attributes
         self.__map = [[ [] for y in xrange(0, self.map_size[1]) ] for x in xrange(0, self.map_size[0]) ]
         self.__delta = {}
+        self.__cell = {}
+
+        self.__update_cell_size()
+    
+    def __update_cell_size(self):
         self.__cell_size = min(self.width / self.map_size[0], self.height / self.map_size[1])
+        self.__padding = (
+                (self.width - self.__cell_size * self.map_size[0]) / 2,
+                (self.height - self.__cell_size * self.map_size[1]) / 2
+                )
+
+    def __update_pos(self, node, x, y, width, height):
+        dx, dy = self.__delta[node]
+        style = {
+                'left': x + dx,
+                'top': y + dy,
+                'width': width,
+                'height': height
+                }
+        node.set_style(style)
+
+    def __restrict_pos(self, x, y):
+        if x < 0:
+            x = 0
+        elif x >= self.map_size[0]:
+            x = self.map_size[0] - 1
+
+        if y < 0:
+            y = 0
+        elif y >= self.map_size[1]:
+            y = self.map_size[1] - 1
+
+        return (x, y)
 
     def on_resize(self):
         old_cell_size = self.__cell_size
         Node.on_resize(self)
-        self.__cell_size = min(self.width / self.map_size[0], self.height / self.map_size[1])
+        self.__update_cell_size()
         ratio = float(self.__cell_size) / old_cell_size
 
         for x, row in enumerate(self.__map):
             for y, cell in enumerate(row):
                 pos = self.get_cell_pos(x, y)
                 for node in cell:
-                    dx, dy = self.__delta[node]
-                    new_width = int(node.width * ratio)
-                    new_height = int(node.height * ratio)
-                    style = {
-                        'left': pos[0] + dx,
-                        'top': pos[1] + dy,
-                        'width': new_width,
-                        'height': new_height
-                        }
-                    node.set_style(style)
+                    new_width = int(node.width * ratio + 0.5)
+                    new_height = int(node.height * ratio + 0.5)
+                    d = self.__delta[node]
+                    dx = int(d[0] * ratio + 0.5)
+                    dy = int(d[1] * ratio + 0.5)
+                    self.__delta[node] = (dx, dy)
+                    self.__update_pos(node, pos[0], pos[1], new_width, new_height)
                     node.reset_surface()
                     node.on_update()
     
@@ -358,45 +375,52 @@ class MapContainer(Node):
         Node.add_node(self, node)
         self.__map[x][y].append(node)
         self.__delta[node] = (dx, dy)
+        self.__cell[node] = (x, y)
 
         pos = self.get_cell_pos(x, y)
-        style = {
-                'left': pos[0] + dx,
-                'top': pos[1] + dy,
-                'width': node.width,
-                'height': node.height
-                }
-        node.set_style(style)
+        self.__update_pos(node, pos[0], pos[1], node.width, node.height)
 
     def remove_node(self, node):
         Node.remove_node(self, node)
-        self.get_cell(node).remove(node)
+        cell = self.get_cell(node)
+        self.__map[cell[0]][cell[1]].remove(node)
         del self.__delta[node]
+        del self.__cell[node]
 
     def get_cell(self, node):
-        for x, row in enumerate(self.__map):
-            for y, cell in enumerate(row):
-                if node in cell:
-                    return (x, y)
-
-        return None
+        return self.__cell[node]
 
     def move_to(self, node, x, y):
-        self.get_cell(node).remove(node)
+        cell = self.get_cell(node)
+        self.__map[cell[0]][cell[1]].remove(node)
         self.__map[x][y].append(node)
+        self.__cell[node] = (x, y)
 
         pos = self.get_cell_pos(x, y)
+        self.__update_pos(node, pos[0], pos[1], node.width, node.height)
+
+    def move_pos(self, node, delta_x, delta_y):
         dx, dy = self.__delta[node]
-        style = {
-                'left': pos[0] + dx,
-                'top': pos[1] + dy,
-                'width': node.width,
-                'height': node.height
-                }
-        node.set_style(style)
+        new_x = node.x + delta_x - dx
+        new_y = node.y + delta_y - dy
+        half_cell = self.__cell_size / 2
+        new_cell = (
+                int((new_x - self.__padding[0] + half_cell) / self.__cell_size),
+                int((new_y - self.__padding[1] + half_cell) / self.__cell_size)
+                )
+        new_cell = self.__restrict_pos(*new_cell)
+        old_cell = self.get_cell(node)
+
+        self.__map[old_cell[0]][old_cell[1]].remove(node)
+        self.__map[new_cell[0]][new_cell[1]].append(node)
+        self.__cell[node] = new_cell
+        self.__update_pos(node, new_x, new_y, node.width, node.height)
 
     def get_cell_pos(self, x, y):
-        return (x * self.__cell_size, y * self.__cell_size)
+        return (
+                self.__padding[0] + x * self.__cell_size, 
+                self.__padding[1] + y * self.__cell_size
+                )
 
     def get_node_pos(self, node):
         return self.get_cell_pos(*self.get_cell(node))
@@ -409,48 +433,84 @@ class Stage(Node):
         self.bgimg = opt['bgimg']
         self.activated = opt['activated']
         self.deactivated = opt['deactivated']
-        self.__update_metrics()
 
-        self.map = [ [
-            Cell(
+        #
+        # Floor Layer
+        #
+
+        self.floor_layer = MapContainer(
                 parent=self,
                 style={
-                    'left': self.__get_cell_pos(x, y)[0],
-                    'top': self.__get_cell_pos(x, y)[1],
-                    'width': self.cell_size, 
-                    'height': self.cell_size, 
+                    'top': self.margin[0],
+                    'right': self.margin[1],
+                    'bottom': self.margin[2],
+                    'left': self.margin[3],
+                    'aspect': 1.0,
+                    'align': 'center',
+                    'vertical-align': 'center'
                     },
-                opt={'pos':[x, y]}
+                opt={
+                    'map_size': self.map_size
+                    }
                 )
-            for y in xrange(0, self.map_size[1]) ] for x in xrange(0, self.map_size[0]) ]
+        self.add_node(self.floor_layer)
 
-        for row in self.map:
-            for cell in row:
-                self.add_node(cell)
+        for x in xrange(0, self.map_size[0]):
+            for y in xrange(0, self.map_size[1]):
+                def should_light_func(x, y):
+                    return lambda node: (x, y) == self.object_layer.get_cell(self.player)
 
-        cell = self.map[0][0]
+                floor = Floor(
+                        parent=self,
+                        style={
+                            'width': self.floor_layer.get_cell_size(),
+                            'height': self.floor_layer.get_cell_size()
+                            },
+                        opt={
+                            'should_light': should_light_func(x, y)
+                            }
+                        )
+                self.floor_layer.add_node(floor, x, y)
+
+        self.texture = {}
+        self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
+        self.on_update()
+
+        #
+        # Object Layer
+        #
+        
+        self.object_layer = MapContainer(
+                parent=self,
+                style={
+                    'top': self.margin[0],
+                    'right': self.margin[1],
+                    'bottom': self.margin[2],
+                    'left': self.margin[3],
+                    'aspect': 1.0,
+                    'align': 'center',
+                    'vertical-align': 'center'
+                    },
+                opt={
+                    'map_size': self.map_size
+                    }
+                )
+        self.add_node(self.object_layer)
+
         self.player = Player(
                 parent=self,
                 style={
-                    'left': cell.x,
-                    'top': cell.y - self.cell_size,
-                    'width': self.cell_size, 
-                    'height': self.cell_size*2, 
+                    'width': self.object_layer.get_cell_size(), 
+                    'height': self.object_layer.get_cell_size() * 2, 
                     },
                 opt={
-                    'pos': cell.pos,
-                    'img': 'player.png',
                     'speed': 2.0,
-                    'get_cell_size': lambda: self.cell_size
+                    'move': lambda node, dx, dy: self.object_layer.move_pos(node, dx, dy),
+                    'bomb': lambda node, count, power: self.place_bomb(*self.object_layer.get_cell(node), count=count, power=power),
+                    'get_cell_size': lambda: self.object_layer.get_cell_size()
                     }
                 )
-        self.add_node(self.player)
-        self.characters = []
-        self.characters.append(self.player)
-
-        cell = self.map[0][0]
-        self.effect = MapEffectLayer(parent=self, style={}, opt=None)
-        self.add_node(self.effect)
+        self.object_layer.add_node(self.player, 0, 0, 0, -self.object_layer.get_cell_size())
 
         self.box = MessageBox(
                 parent=self, 
@@ -462,85 +522,6 @@ class Stage(Node):
                     },
                 opt=None)
         self.add_node(self.box)
-
-        mapcon = MapContainer(
-                parent=self,
-                style={
-                    'top': self.margin[0],
-                    'right': self.margin[1],
-                    'bottom': self.margin[2],
-                    'left': self.margin[3],
-                    'aspect': 1,
-                    'align': 'center',
-                    'vertical-align': 'center'
-                    },
-                opt={
-                    'map_size': self.map_size
-                    }
-                )
-        self.add_node(mapcon)
-        tmpbomb1 = Bomb(
-                parent=mapcon,
-                style={
-                    'width': mapcon.get_cell_size(),
-                    'height': mapcon.get_cell_size(),
-                    },
-                opt={
-                    'count': 0,
-                    'power': 0,
-                    'is endless': True,
-                    'explode': None,
-                    'destroy': None
-                    }
-                )
-        tmpbomb2 = Bomb(
-                parent=mapcon,
-                style={
-                    'width': mapcon.get_cell_size(),
-                    'height': mapcon.get_cell_size(),
-                    },
-                opt={
-                    'count': 0,
-                    'power': 0,
-                    'is endless': True,
-                    'explode': None,
-                    'destroy': None
-                    }
-                )
-        mapcon.add_node(tmpbomb1, 0, 0)
-        mapcon.add_node(tmpbomb2, 1, 1)
-        print tmpbomb1.x, tmpbomb1.y
-        print tmpbomb2.x, tmpbomb2.y
-        print mapcon.children
-
-        self.texture = {}
-        self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
-        self.on_update()
-
-    def __repr__(self):
-        str = ''
-        for x in xrange(0, len(self.map)):
-            if (x % 5 == 0): 
-                str += '%2d' % x
-            else: 
-                str += '  '
-            for cell in self.map[x]:
-                str += repr(cell)
-
-            str += '\n'
-
-        return str
-    
-    def __update_metrics(self):
-        self.cell_size = min(
-                (self.width - self.margin[1] - self.margin[3])/self.map_size[0], 
-                (self.height - self.margin[0] - self.margin[2])/self.map_size[1]
-                )
-        self.top = (self.height - self.cell_size * self.map_size[1]) / 2
-        self.left = (self.width - self.cell_size * self.map_size[0]) / 2
-
-    def __get_cell_pos(self, x, y):
-        return (self.left + self.cell_size*x, self.top + self.cell_size*y)
 
     def on_update(self):
         scale_width = self.width / float(self.texture['bgimg'].get_width())
@@ -561,30 +542,6 @@ class Stage(Node):
         cr.paint()
         cr.set_source_surface(self.texture['bgimg'], x, y)
         cr.paint_with_alpha(0.7)
-
-    def on_resize(self):
-        old_cell_size, old_top, old_left = self.cell_size, self.top, self.left
-
-        Node.on_resize(self)
-        self.__update_metrics()
-
-        for x, row in enumerate(self.map):
-            for y, cell in enumerate(row):
-                cell.set_style({
-                    'left': self.__get_cell_pos(x, y)[0],
-                    'top': self.__get_cell_pos(x, y)[1],
-                    'width': self.cell_size, 
-                    'height': self.cell_size
-                    })
-
-        ratio = float(self.cell_size) / old_cell_size
-        for c in self.characters:
-            c.set_style({
-                'left': int((c.x - old_left) * ratio + self.left),
-                'top': int((c.y - old_top) * ratio + self.top),
-                'width': int(c.width * ratio),
-                'height': int(c.height * ratio)
-                })
 
     def on_tick(self, interval):
         if self.activated(100):
@@ -616,20 +573,22 @@ class Stage(Node):
         if self.activated(122):
             self.player.bomb()
 
-    def bomb(self, x, y, count, power):
-        cell = self.map[x][y]
+    def place_bomb(self, x, y, count, power):
         bomb = Bomb(
-                parent=cell,
-                style={},
+                parent=self.object_layer,
+                style={
+                    'width': self.object_layer.get_cell_size(),
+                    'height': self.object_layer.get_cell_size()
+                    },
                 opt={
                     'count': count,
                     'power': power,
-                    'destroy': lambda node: cell.remove_node(node),
-                    'explode': lambda node: self.effect.explode(cell.pos[0], cell.pos[1], node.power)
+                    'destroy': lambda node: self.object_layer.remove_node(node),
+                    'explode': lambda node: None
                     }
                 )
+        self.object_layer.add_node(bomb, x, y)
         bomb.start_counting()
-        cell.add_node(bomb)
 
 fps_counters = [0 for i in range(0, 5)]
 fps_cur_counter = 0

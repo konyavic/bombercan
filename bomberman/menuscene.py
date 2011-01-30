@@ -76,7 +76,7 @@ class Selections(Node):
         self.labels = [ Label(
             parent=self,
             style={
-                'top': (i + 1) / float(len(self.labels) + 2),
+                'top': str((i + 1) * 100 / float(len(self.labels) + 2)) + '%',
                 'align': 'center'
                 },
             opt={
@@ -159,10 +159,10 @@ class MenuScene(Node):
         self.sel = Selections(
                 parent=self,
                 style={
-                    'left': 0.25, 
-                    'top': 0.5, 
-                    'width': 0.5,
-                    'height': 0.3
+                    'left': '25%', 
+                    'top': '50%', 
+                    'width': '50%',
+                    'height': '30%'
                     },
                 opt={
                     'font': 'Meiryo, MS Gothic 18',
@@ -175,7 +175,7 @@ class MenuScene(Node):
         text = Label(
                 parent=self,
                 style={
-                    'top': 0.3,
+                    'top': '30%',
                     'align': 'center'
                     },
                 opt={

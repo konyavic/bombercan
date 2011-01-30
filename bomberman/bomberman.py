@@ -13,6 +13,7 @@ from pnode import Node
 from pnode import Game
 
 from objects import Bomb
+from objects import HardBlock
 from menuscene import MenuScene
 
 class Player(Node):
@@ -348,14 +349,17 @@ class MapContainer(Node):
 
         return (x, y)
 
+    def __sort_children(self):
+        self.children.sort(key=lambda node: self.__cell[node][1])
+
     def on_resize(self):
         old_cell_size = self.__cell_size
         Node.on_resize(self)
         self.__update_cell_size()
         ratio = float(self.__cell_size) / old_cell_size
 
-        for x, row in enumerate(self.__map):
-            for y, cell in enumerate(row):
+        for x, col in enumerate(self.__map):
+            for y, cell in enumerate(col):
                 pos = self.get_cell_pos(x, y)
                 for node in cell:
                     new_width = int(node.width * ratio + 0.5)
@@ -376,6 +380,7 @@ class MapContainer(Node):
         self.__map[x][y].append(node)
         self.__delta[node] = (dx, dy)
         self.__cell[node] = (x, y)
+        self.__sort_children()
 
         pos = self.get_cell_pos(x, y)
         self.__update_pos(node, pos[0], pos[1], node.width, node.height)
@@ -390,11 +395,15 @@ class MapContainer(Node):
     def get_cell(self, node):
         return self.__cell[node]
 
+    def get_cell_nodes(self, x, y):
+        return self.__map[x][y]
+
     def move_to(self, node, x, y):
         cell = self.get_cell(node)
         self.__map[cell[0]][cell[1]].remove(node)
         self.__map[x][y].append(node)
         self.__cell[node] = (x, y)
+        self.__sort_children()
 
         pos = self.get_cell_pos(x, y)
         self.__update_pos(node, pos[0], pos[1], node.width, node.height)
@@ -403,6 +412,18 @@ class MapContainer(Node):
         dx, dy = self.__delta[node]
         new_x = node.x + delta_x - dx
         new_y = node.y + delta_y - dy
+
+        top_left = self.get_cell_pos(0, 0)
+        bottom_right = self.get_cell_pos(self.map_size[0] - 1, self.map_size[1] - 1)
+        if new_x < top_left[0]:
+            new_x = top_left[0]
+        elif new_x > bottom_right[0]:
+            new_x = bottom_right[0]
+        elif new_y < top_left[1]:
+            new_y = top_left[1]
+        elif new_y > bottom_right[1]:
+            new_y = bottom_right[1]
+
         half_cell = self.__cell_size / 2
         new_cell = (
                 int((new_x - self.__padding[0] + half_cell) / self.__cell_size),
@@ -414,6 +435,7 @@ class MapContainer(Node):
         self.__map[old_cell[0]][old_cell[1]].remove(node)
         self.__map[new_cell[0]][new_cell[1]].append(node)
         self.__cell[node] = new_cell
+        self.__sort_children()
         self.__update_pos(node, new_x, new_y, node.width, node.height)
 
     def get_cell_pos(self, x, y):
@@ -423,7 +445,8 @@ class MapContainer(Node):
                 )
 
     def get_node_pos(self, node):
-        return self.get_cell_pos(*self.get_cell(node))
+        delta = self.__delta[node]
+        return (node.x - delta[0], node.y - delta[1])
 
 class Stage(Node):
     def __init__(self, parent, style, opt):
@@ -461,7 +484,7 @@ class Stage(Node):
                     return lambda node: (x, y) == self.object_layer.get_cell(self.player)
 
                 floor = Floor(
-                        parent=self,
+                        parent=self.floor_layer,
                         style={
                             'width': self.floor_layer.get_cell_size(),
                             'height': self.floor_layer.get_cell_size()
@@ -495,22 +518,64 @@ class Stage(Node):
                     'map_size': self.map_size
                     }
                 )
+        layer = self.object_layer
         self.add_node(self.object_layer)
 
+        def move_player(node, dx, dy):
+            cell = layer.get_cell(node)
+            pos = layer.get_node_pos(node)
+            cell_size = layer.get_cell_size()
+
+            if (dx > 0 
+                    and cell[0] < (self.map_size[0] - 1) 
+                    and layer.get_cell_nodes(cell[0] + 1, cell[1])):
+                dx = min(layer.get_cell_pos(*cell)[0] - pos[0], dx)
+            elif (dx < 0 
+                    and cell[0] > 0 
+                    and layer.get_cell_nodes(cell[0] - 1, cell[1])):
+                dx = max(layer.get_cell_pos(*cell)[0] - pos[0], dx)
+            elif dx == 0:
+                dx = layer.get_cell_pos(*cell)[0] - pos[0]
+            
+            if (dy > 0 
+                    and cell[1] < (self.map_size[1] - 1) 
+                    and layer.get_cell_nodes(cell[0], cell[1] + 1)):
+                dy = min(layer.get_cell_pos(*cell)[1] - pos[1], dy)
+            elif (dy < 0 
+                    and cell[1] > 0 
+                    and layer.get_cell_nodes(cell[0], cell[1] - 1)):
+                dy = max(layer.get_cell_pos(*cell)[1] - pos[1], dy)
+            elif dy == 0:
+                dy = layer.get_cell_pos(*cell)[1] - pos[1]
+
+            layer.move_pos(node, dx, dy)
+
         self.player = Player(
-                parent=self,
+                parent=layer,
                 style={
-                    'width': self.object_layer.get_cell_size(), 
-                    'height': self.object_layer.get_cell_size() * 2, 
+                    'width': layer.get_cell_size(), 
+                    'height': layer.get_cell_size() * 2, 
                     },
                 opt={
-                    'speed': 2.0,
-                    'move': lambda node, dx, dy: self.object_layer.move_pos(node, dx, dy),
-                    'bomb': lambda node, count, power: self.place_bomb(*self.object_layer.get_cell(node), count=count, power=power),
-                    'get_cell_size': lambda: self.object_layer.get_cell_size()
+                    'speed': 4.0,
+                    'move': move_player,
+                    'bomb': lambda node, count, power: 
+                    self.place_bomb(*layer.get_cell(node), count=count, power=power),
+                    'get_cell_size': lambda: layer.get_cell_size()
                     }
                 )
-        self.object_layer.add_node(self.player, 0, 0, 0, -self.object_layer.get_cell_size())
+        layer.add_node(self.player, 0, 0, 0, -layer.get_cell_size())
+
+        for x in xrange(1, self.map_size[0], 2):
+            for y in xrange(1, self.map_size[1], 2):
+                block = HardBlock(
+                    parent=layer,
+                    style={
+                        'width': layer.get_cell_size(), 
+                        'height': layer.get_cell_size() * 2, 
+                        },
+                    )
+                layer.add_node(block, x, y, 0, -layer.get_cell_size())
 
         self.box = MessageBox(
                 parent=self, 

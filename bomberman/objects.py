@@ -82,3 +82,29 @@ class Bomb(Node):
     def explode(self):
         self.do_explode(self)
         self.do_destroy(self)
+
+class HardBlock(Node):
+    def __init__(self, parent, style):
+        Node.__init__(self, parent, style)
+        self.on_update()
+
+    def on_update(self):
+        cr = cairo.Context(self.surface)
+        self.clear_context(cr)
+        cr.move_to(self.width * 0.15, self.height * 0.85)
+        cr.curve_to(
+                self.width * 0.3, 0,
+                self.width * 0.7, 0,
+                self.width * 0.85, self.height * 0.85 
+                )
+        cr.curve_to(
+                self.width * 0.7, self.height * 0.9,
+                self.width * 0.3, self.height * 0.9,
+                self.width * 0.15, self.height * 0.85 
+                )
+        cr.close_path()
+        cr.set_line_width(3)
+        cr.set_source_rgb(0, 0, 0)
+        cr.stroke_preserve()
+        cr.set_source_rgb(0, 0.3, 0.3)
+        cr.fill()

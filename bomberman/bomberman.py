@@ -16,11 +16,10 @@ from objects import Bomb
 from objects import HardBlock
 from menuscene import MenuScene
 
-# z-index
+# z-index table
 layers = {
-        'bg': 100,
-        'map': 50,
-        'object': 10
+        'floor': -100,
+        'object': -300
         }
 
 class Player(Node):
@@ -471,11 +470,7 @@ class Stage(Node):
         self.activated = opt['activated']
         self.deactivated = opt['deactivated']
 
-        #
-        # Floor Layer
-        #
-
-        self.floor_layer = MapContainer(
+        self.map = MapContainer(
                 parent=self,
                 style={
                     'top': self.margin[0],
@@ -490,106 +485,85 @@ class Stage(Node):
                     'map_size': self.map_size
                     }
                 )
-        self.add_node(self.floor_layer)
+        self.add_node(self.map)
+        cell_size = self.map.get_cell_size()
 
         for x in xrange(0, self.map_size[0]):
             for y in xrange(0, self.map_size[1]):
                 def should_light_func(x, y):
-                    return lambda node: (x, y) == self.object_layer.get_cell(self.player)
+                    return lambda node: (x, y) == self.map.get_cell(self.player)
 
                 floor = Floor(
-                        parent=self.floor_layer,
+                        parent=self.map,
                         style={
-                            'width': self.floor_layer.get_cell_size(),
-                            'height': self.floor_layer.get_cell_size()
+                            'width': cell_size,
+                            'height': cell_size,
+                            'z-index': layers['floor']
                             },
                         opt={
                             'should_light': should_light_func(x, y)
                             }
                         )
-                self.floor_layer.add_node(floor, x, y)
-
-        self.texture = {}
-        self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
-        self.on_update()
-
-        #
-        # Object Layer
-        #
-        
-        self.object_layer = MapContainer(
-                parent=self,
-                style={
-                    'top': self.margin[0],
-                    'right': self.margin[1],
-                    'bottom': self.margin[2],
-                    'left': self.margin[3],
-                    'aspect': 1.0,
-                    'align': 'center',
-                    'vertical-align': 'center'
-                    },
-                opt={
-                    'map_size': self.map_size
-                    }
-                )
-        layer = self.object_layer
-        self.add_node(self.object_layer)
+                self.map.add_node(floor, x, y)
 
         def move_player(node, dx, dy):
-            cell = layer.get_cell(node)
-            pos = layer.get_node_pos(node)
-            cell_size = layer.get_cell_size()
+            map = self.map
+            cell = map.get_cell(node)
+            pos = map.get_node_pos(node)
+            cell_size = map.get_cell_size()
 
             if (dx > 0 
                     and cell[0] < (self.map_size[0] - 1) 
-                    and layer.get_cell_nodes(cell[0] + 1, cell[1])):
-                dx = min(layer.get_cell_pos(*cell)[0] - pos[0], dx)
+                    and len(map.get_cell_nodes(cell[0] + 1, cell[1])) > 1):
+                dx = min(map.get_cell_pos(*cell)[0] - pos[0], dx)
             elif (dx < 0 
                     and cell[0] > 0 
-                    and layer.get_cell_nodes(cell[0] - 1, cell[1])):
-                dx = max(layer.get_cell_pos(*cell)[0] - pos[0], dx)
+                    and len(map.get_cell_nodes(cell[0] - 1, cell[1])) > 1):
+                dx = max(map.get_cell_pos(*cell)[0] - pos[0], dx)
             elif dx == 0:
-                dx = layer.get_cell_pos(*cell)[0] - pos[0]
+                dx = map.get_cell_pos(*cell)[0] - pos[0]
             
             if (dy > 0 
                     and cell[1] < (self.map_size[1] - 1) 
-                    and layer.get_cell_nodes(cell[0], cell[1] + 1)):
-                dy = min(layer.get_cell_pos(*cell)[1] - pos[1], dy)
+                    and len(map.get_cell_nodes(cell[0], cell[1] + 1)) > 1):
+                dy = min(map.get_cell_pos(*cell)[1] - pos[1], dy)
             elif (dy < 0 
                     and cell[1] > 0 
-                    and layer.get_cell_nodes(cell[0], cell[1] - 1)):
-                dy = max(layer.get_cell_pos(*cell)[1] - pos[1], dy)
+                    and len(map.get_cell_nodes(cell[0], cell[1] - 1)) > 1):
+                dy = max(map.get_cell_pos(*cell)[1] - pos[1], dy)
             elif dy == 0:
-                dy = layer.get_cell_pos(*cell)[1] - pos[1]
+                dy = map.get_cell_pos(*cell)[1] - pos[1]
 
-            layer.move_pos(node, dx, dy)
+            map.move_pos(node, dx, dy)
 
         self.player = Player(
-                parent=layer,
+                parent=self.map,
                 style={
-                    'width': layer.get_cell_size(), 
-                    'height': layer.get_cell_size() * 2, 
+                    'width': cell_size, 
+                    'height': cell_size * 2, 
+                    'z-index': layers['object']
                     },
                 opt={
                     'speed': 4.0,
                     'move': move_player,
                     'bomb': lambda node, count, power: 
-                    self.place_bomb(*layer.get_cell(node), count=count, power=power),
-                    'get_cell_size': lambda: layer.get_cell_size()
+                    self.place_bomb(*self.map.get_cell(node), count=count, power=power),
+                    'get_cell_size': lambda: self.map.get_cell_size()
                     }
                 )
-        layer.add_node(self.player, 0, 0, 0, -layer.get_cell_size())
+        self.map.add_node(self.player, 0, 0, 0, -cell_size)
 
         for x in xrange(1, self.map_size[0], 2):
             for y in xrange(1, self.map_size[1], 2):
                 block = HardBlock(
-                    parent=layer,
+                    parent=self.map,
                     style={
-                        'width': layer.get_cell_size(), 
-                        'height': layer.get_cell_size() * 2, 
+                        'width': cell_size, 
+                        'height': cell_size * 2, 
+                        'z-index': layers['object']
                         },
                     )
-                layer.add_node(block, x, y, 0, -layer.get_cell_size())
+                self.map.add_node(block, x, y, 0, -cell_size)
 
         self.box = MessageBox(
                 parent=self, 
@@ -597,10 +571,15 @@ class Stage(Node):
                     'width': '80%',
                     'height': '33%',
                     'align': 'center',
-                    'vertical-align': 'center'
+                    'vertical-align': 'center',
+                    'z-index': -500
                     },
                 opt=None)
         self.add_node(self.box)
+
+        self.texture = {}
+        self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
+        self.on_update()
 
     def on_update(self):
         scale_width = self.width / float(self.texture['bgimg'].get_width())
@@ -654,19 +633,20 @@ class Stage(Node):
 
     def place_bomb(self, x, y, count, power):
         bomb = Bomb(
-                parent=self.object_layer,
+                parent=self.map,
                 style={
-                    'width': self.object_layer.get_cell_size(),
-                    'height': self.object_layer.get_cell_size(),
+                    'width': self.map.get_cell_size(),
+                    'height': self.map.get_cell_size(),
+                    'z-index': layers['object']
                     },
                 opt={
                     'count': count,
                     'power': power,
-                    'destroy': lambda node: self.object_layer.remove_node(node),
+                    'destroy': lambda node: self.map.remove_node(node),
                     'explode': lambda node: None
                     }
                 )
-        self.object_layer.add_node(bomb, x, y)
+        self.map.add_node(bomb, x, y)
         bomb.start_counting()
 
 fps_counters = [0 for i in range(0, 5)]

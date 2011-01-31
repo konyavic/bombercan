@@ -103,8 +103,8 @@ class HardBlock(Node):
                 self.width * 0.15, self.height * 0.85 
                 )
         cr.close_path()
+        cr.set_source_rgb(0, 0.3, 0.3)
+        cr.fill_preserve()
         cr.set_line_width(3)
         cr.set_source_rgb(0, 0, 0)
-        cr.stroke_preserve()
-        cr.set_source_rgb(0, 0.3, 0.3)
-        cr.fill()
+        cr.stroke()

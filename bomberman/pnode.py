@@ -8,7 +8,7 @@ import gtk.gdk as gdk
 import gobject
 import cairo
 
-__style_key = ['width', 'height', 'left', 'top', 'right', 'bottom', 'aspect', 'align', 'vertical-align']
+__style_key = ['width', 'height', 'left', 'top', 'right', 'bottom', 'aspect', 'align', 'vertical-align', 'z-index']
 __style_key_prio = dict([(__style_key[i], i) for i in range(0, len(__style_key))])
 
 def style_key_prio(key):
@@ -31,6 +31,7 @@ def evaluate_style(node, style):
     # defaults
     node.x = 0
     node.y = 0
+    node.z_index = 0
     node.width = node.parent.width
     node.height = node.parent.height
 
@@ -56,13 +57,11 @@ def evaluate_style(node, style):
                 node.x = node.parent.width - node.width - parse_value(value, node.parent.width)
             else:
                 node.width = node.parent.width - node.x - parse_value(value, node.parent.width)
-
         elif k == 'bottom':
             if has_height:
                 node.y = node.parent.height - node.height - parse_value(value, node.parent.height)
             else:
                 node.height = node.parent.height - node.y - parse_value(value, node.parent.height)
-
         elif k == 'aspect':
             ratio = float(value)    # width / height
             if ratio == 1.0:
@@ -72,7 +71,6 @@ def evaluate_style(node, style):
                 node.height = node.width / ratio
             else:
                 node.width = node.height * ratio
-
         elif k == 'align':
             if value == 'center':
                 node.x = (node.parent.width - node.width) / 2.0
@@ -80,7 +78,6 @@ def evaluate_style(node, style):
                 node.x = 0
             elif value == 'right':
                 node.x = node.parent.width - node.width
-
         elif k == 'vertical-align':
             if value == 'center':
                 node.y = (node.parent.height - node.height) / 2.0
@@ -88,6 +85,8 @@ def evaluate_style(node, style):
                 node.y = 0
             elif value == 'bottom':
                 node.y = node.parent.height - node.height
+        elif k == 'z-index':
+            node.z_index = int(value)
 
 class Node:
     def __init__(self, parent, style):
@@ -103,6 +102,10 @@ class Node:
         self.animation_remove_list = set()
         self.animated = False
 
+    #
+    # Functions could be called without restrictions
+    #
+   
     def set_style(self, style):
         self.style = style
         evaluate_style(self, style)
@@ -140,10 +143,6 @@ class Node:
         cr.set_operator(cairo.OPERATOR_CLEAR)
         cr.paint()
         cr.restore()
-
-    '''
-    Functions could be called without restrictions
-    '''
 
     def add_node(self, node):
         self.children.append(node)
@@ -193,9 +192,9 @@ class Node:
 
         self.animation_remove_list = set()
 
-    '''
-    Functions should be implemented in sub-classes
-    '''
+    #
+    # Functions should be implemented in sub-classes
+    #
     
     def on_update(self):
         pass
@@ -208,9 +207,9 @@ class Node:
     def on_tick(self, interval):
         pass
 
-    '''
-    Functions should be called from the top
-    '''
+    #
+    # Functions should be called from the top node
+    #
 
     def __update_animation(self, name, anime, interval):
         # remove the anime if it is done
@@ -243,8 +242,20 @@ class Node:
 
     def do_update_recursive(self, cr, x, y, interval):
         stack = [(self, x, y)]
+        queue = []
+
         while stack:
             current, x, y = stack.pop(0)
+            node_x = x + current.x
+            node_y = y + current.y
+            queue.append((current, node_x, node_y))
+            stack = [(node, node_x, node_y) for node in current.children] + stack
+
+        queue.sort(key=lambda tup: -tup[0].z_index)
+
+        while queue:
+            current, x, y = queue.pop(0)
+
             if current.animated and not current.animation_list:
                 # update at the end of all animation queued
                 current.animated = False
@@ -264,15 +275,11 @@ class Node:
                         current.on_update()
                         break
 
-            if current.surface:
-                node_x = x + current.x
-                node_y = y + current.y
-                surface_x = node_x + current.surface_x
-                surface_y = node_y + current.surface_y
-                cr.set_source_surface(current.surface, surface_x, surface_y)
-                cr.paint()
-
-            stack = [(node, node_x, node_y) for node in current.children] + stack
+            # draw surface to the context
+            surface_x = x + current.surface_x
+            surface_y = y + current.surface_y
+            cr.set_source_surface(current.surface, surface_x, surface_y)
+            cr.paint()
 
     def do_tick_recursive(self, interval):
         queue = [self]
@@ -321,9 +328,11 @@ class Game:
         self.__quit = True
 
     def activated(self, key):
+        # is_key_down
         return not (key in self.__keymap) and (key in self.__next_keymap)
 
     def deactivated(self, key):
+        # is_key_up
         return (key in self.__keymap) and not (key in self.__next_keymap)
 
     def on_tick(self, interval):

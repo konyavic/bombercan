@@ -16,6 +16,13 @@ from objects import Bomb
 from objects import HardBlock
 from menuscene import MenuScene
 
+# z-index
+layers = {
+        'bg': 100,
+        'map': 50,
+        'object': 10
+        }
+
 class Player(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
@@ -332,7 +339,9 @@ class MapContainer(Node):
                 'left': x + dx,
                 'top': y + dy,
                 'width': width,
-                'height': height
+                'height': height,
+                # XXX: preserve z-index, bad approach
+                'z-index': node.z_index
                 }
         node.set_style(style)
 
@@ -643,7 +652,7 @@ class Stage(Node):
                 parent=self.object_layer,
                 style={
                     'width': self.object_layer.get_cell_size(),
-                    'height': self.object_layer.get_cell_size()
+                    'height': self.object_layer.get_cell_size(),
                     },
                 opt={
                     'count': count,

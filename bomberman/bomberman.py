@@ -323,8 +323,11 @@ class MapContainer(Node):
         self.__map = [[ [] for y in xrange(0, self.map_size[1]) ] for x in xrange(0, self.map_size[0]) ]
         self.__delta = {}
         self.__cell = {}
+        self.__orig_size = {}
+        self.__orig_delta = {}
 
         self.__update_cell_size()
+        self.__orig_cell_size = self.__cell_size
     
     def __update_cell_size(self):
         self.__cell_size = min(self.width / self.map_size[0], self.height / self.map_size[1])
@@ -362,24 +365,23 @@ class MapContainer(Node):
         self.children.sort(key=lambda node: self.__cell[node][1])
 
     def on_resize(self):
-        old_cell_size = self.__cell_size
         Node.on_resize(self)
         self.__update_cell_size()
-        ratio = float(self.__cell_size) / old_cell_size
+        ratio = float(self.__cell_size) / self.__orig_cell_size
 
         for x, col in enumerate(self.__map):
             for y, cell in enumerate(col):
                 pos = self.get_cell_pos(x, y)
                 for node in cell:
-                    new_width = int(node.width * ratio + 0.5)
-                    new_height = int(node.height * ratio + 0.5)
-                    d = self.__delta[node]
-                    dx = int(d[0] * ratio + 0.5)
-                    dy = int(d[1] * ratio + 0.5)
+                    # XXX: node.x node.y is not handled properly
+                    width, height = self.__orig_size[node]
+                    new_width = width * ratio
+                    new_height = height * ratio
+                    dx, dy = self.__orig_delta[node]
+                    dx = dx * ratio
+                    dy = dy * ratio
                     self.__delta[node] = (dx, dy)
                     self.__update_pos(node, pos[0], pos[1], new_width, new_height)
-                    node.reset_surface()
-                    node.on_update()
     
     def get_cell_size(self):
         return self.__cell_size
@@ -388,7 +390,9 @@ class MapContainer(Node):
         Node.add_node(self, node)
         self.__map[x][y].append(node)
         self.__delta[node] = (dx, dy)
+        self.__orig_delta[node] = self.__delta[node]
         self.__cell[node] = (x, y)
+        self.__orig_size[node] = (node.width, node.height)
         self.__sort_children()
 
         pos = self.get_cell_pos(x, y)
@@ -399,7 +403,9 @@ class MapContainer(Node):
         cell = self.get_cell(node)
         self.__map[cell[0]][cell[1]].remove(node)
         del self.__delta[node]
+        del self.__orig_delta[node]
         del self.__cell[node]
+        del self.__orig_size[node]
 
     def get_cell(self, node):
         return self.__cell[node]

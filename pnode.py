@@ -327,12 +327,10 @@ class Game:
     def quit(self):
         self.__quit = True
 
-    def activated(self, key):
-        # is_key_down
+    def key_up(self, key):
         return not (key in self.__keymap) and (key in self.__next_keymap)
 
-    def deactivated(self, key):
-        # is_key_up
+    def key_down(self, key):
         return (key in self.__keymap) and not (key in self.__next_keymap)
 
     def on_tick(self, interval):

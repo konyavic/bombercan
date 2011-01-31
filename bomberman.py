@@ -3,13 +3,7 @@
 
 import time
 
-import gtk
-import gtk.gdk as gdk
-import gobject
-import cairo
-
 from pnode import Game
-
 from menuscene import MenuScene
 from stagescene import StageScene
 
@@ -42,11 +36,11 @@ class Bomberman(Game):
                 parent=self,
                 style={},
                 opt={
-                    'map_size': [15, 15], 
-                    'margin': [20, 20, 20, 20],
-                    'bgimg': 'stage_bg.png',
-                    'activated': self.activated,
-                    'deactivated': self.deactivated
+                    '$map size': [15, 15], 
+                    '$margin': [20, 20, 20, 20],
+                    '$bgimg': 'stage_bg.png',
+                    '@key up': self.key_up,
+                    '@key down': self.key_down
                     }
                 )
 
@@ -58,10 +52,10 @@ class Bomberman(Game):
                 parent=self,
                 style={},
                 opt={
-                    'bgimg': 'menu_bg.png',
-                    'activated': self.activated,
-                    'deactivated': self.deactivated,
-                    'start game': start_game
+                    '$bgimg': 'menu_bg.png',
+                    '@key up': self.key_up,
+                    '@key down': self.key_down,
+                    '@start game': start_game
                     }
                 )
         self.top_node = menu

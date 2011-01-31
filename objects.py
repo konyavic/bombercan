@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 import math
 
@@ -14,16 +15,16 @@ class Bomb(Node):
         Node.__init__(self, parent, style)
 
         # input attributes
-        self.count = float(opt['count'])
-        self.power = int(opt['power'])
-        if opt.has_key('is endless'):
-            self.is_endless = opt['is endless']
+        self.count = float(opt['$count'])
+        self.power = int(opt['$power'])
+        if opt.has_key('$is endless'):
+            self.is_endless = opt['$is endless']
         else:
             self.is_endless = False
 
         # dependent functions
-        self.do_explode = opt['explode']
-        self.do_destroy = opt['destroy']
+        self.do_explode = opt['@explode']
+        self.do_destroy = opt['@destroy']
 
         # private attributes
         self.__scale = 1.0
@@ -112,10 +113,10 @@ class HardBlock(Node):
 class Player(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
-        self.speed = opt['speed']
-        self.do_move = opt['move']
-        self.do_bomb = opt['bomb']
-        self.get_cell_size = opt['get_cell_size']
+        self.speed = opt['$speed']
+        self.do_move = opt['@move']
+        self.do_bomb = opt['@bomb']
+        self.get_cell_size = opt['?cell size']
         self.on_update()
 
     def __draw_feet(self, cr, x, y, inverse=1):
@@ -269,9 +270,9 @@ class Floor(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
         
-        self.should_light = opt['should_light']
+        self.check_should_light = opt['?should light']
 
-        self.lighted = False
+        self.__lighted = False
         self.on_update()
 
     def __draw_simple_pattern(self, color):
@@ -291,14 +292,14 @@ class Floor(Node):
         self.__draw_simple_pattern(self.color)
 
     def on_tick(self, interval):
-        if self.should_light(self) and not self.lighted:
+        if self.check_should_light(self) and not self.__lighted:
             self.light(True)
-            self.lighted = True
-        elif not self.should_light(self) and self.lighted:
+        elif not self.check_should_light(self) and self.__lighted:
             self.light(False)
-            self.lighted = False 
 
     def light(self, b):
+        self.__lighted = b
+
         def blink_animation(self, phase):
             c = math.cos(phase*math.pi*2)
             self.color = (

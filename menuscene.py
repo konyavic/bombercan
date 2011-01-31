@@ -14,14 +14,14 @@ from objects import Bomb
 class Label(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
-        self.text = opt['text']
-        self.color = opt['color']
-        if opt.has_key('font'):
-            self.font = opt['font']
+        self.text = opt['$text']
+        self.color = opt['$color']
+        if opt.has_key('$font'):
+            self.font = opt['$font']
             self.__font = pango.FontDescription(self.font)
 
-        if opt.has_key('bgcolor'):
-            self.bgcolor = opt['bgcolor']
+        if opt.has_key('$bgcolor'):
+            self.bgcolor = opt['$bgcolor']
         else:
             self.bgcolor = (0, 0, 0, 0)
 
@@ -63,12 +63,12 @@ class Selections(Node):
         Node.__init__(self, parent, style)
 
         # input attributes
-        self.labels = opt['labels']
-        if opt.has_key('font'):
-            self.font = opt['font']
+        self.labels = opt['$labels']
+        if opt.has_key('$font'):
+            self.font = opt['$font']
 
-        if opt.has_key('bgcolor'):
-            self.bgcolor = opt['bgcolor']
+        if opt.has_key('$bgcolor'):
+            self.bgcolor = opt['$bgcolor']
         else:
             self.bgcolor = (0, 0, 0, 0)
 
@@ -80,9 +80,9 @@ class Selections(Node):
                 'align': 'center'
                 },
             opt={
-                'text': self.labels[i],
-                'color': (1, 1, 1, 1),
-                'font': self.font
+                '$text': self.labels[i],
+                '$color': (1, 1, 1, 1),
+                '$font': self.font
                 }
             ) for i in range(0, len(self.labels)) ]
 
@@ -98,11 +98,11 @@ class Selections(Node):
                     'height': self.labels[0].height,
                     },
                 opt={
-                    'count': 0,
-                    'power': 0,
-                    'is endless': True,
-                    'explode': None,
-                    'destroy': None
+                    '$count': 0,
+                    '$power': 0,
+                    '$is endless': True,
+                    '@explode': None,
+                    '@destroy': None
                     }
                 )
         self.add_node(self.curser)
@@ -148,12 +148,10 @@ class MenuScene(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
 
-        self.bgimg = opt['bgimg']
-
-        # dependent functions
-        self.start_game = opt['start game']
-        self.activated = opt['activated']
-        self.deactivated = opt['deactivated']
+        self.bgimg = opt['$bgimg']
+        self.start_game = opt['@start game']
+        self.key_up = opt['@key up']
+        self.key_down = opt['@key down']
 
         # sub-nodes
         self.sel = Selections(
@@ -165,9 +163,9 @@ class MenuScene(Node):
                     'height': '30%'
                     },
                 opt={
-                    'font': 'Meiryo, MS Gothic 18',
-                    'labels': [u'スタート', u'オプション', u'（゜д゜;;'],
-                    'bgcolor': (0.3, 0.3, 0.7, 0.7)
+                    '$font': 'Meiryo, MS Gothic 18',
+                    '$labels': [u'スタート', u'オプション', u'（゜д゜;;'],
+                    '$bgcolor': (0.3, 0.3, 0.7, 0.7)
                     }
                 )
         self.add_node(self.sel)
@@ -179,9 +177,9 @@ class MenuScene(Node):
                     'align': 'center'
                     },
                 opt={
-                    'text': u'ボン・バーマン',
-                    'font': 'Meiryo, MS Gothic bold 30',
-                    'color': (1, 1, 0.3, 1),
+                    '$text': u'ボン・バーマン',
+                    '$font': 'Meiryo, MS Gothic bold 30',
+                    '$color': (1, 1, 0.3, 1),
                     }
                 )
         self.add_node(text)
@@ -211,11 +209,11 @@ class MenuScene(Node):
         cr.paint_with_alpha(0.7)
 
     def on_tick(self, interval):
-        if self.activated(65362):
+        if self.key_up(65362):
             self.sel.select_up()
-        elif self.activated(65364):
+        elif self.key_up(65364):
             self.sel.select_down()
 
-        if self.activated(32):
+        if self.key_up(32):
             self.start_game()
 

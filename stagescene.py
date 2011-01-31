@@ -26,7 +26,7 @@ class MapContainer(Node):
         Node.__init__(self, parent, style)
 
         # input attributes
-        self.map_size = opt['map_size']
+        self.map_size = opt['$map size']
 
         # private attributes
         self.__map = [[ [] for y in xrange(0, self.map_size[1]) ] for x in xrange(0, self.map_size[0]) ]
@@ -172,14 +172,7 @@ class MapContainer(Node):
         return (node.x - delta[0], node.y - delta[1])
 
 class StageScene(Node):
-    def __init__(self, parent, style, opt):
-        Node.__init__(self, parent, style)
-        self.map_size = opt['map_size']
-        self.margin = opt['margin']
-        self.bgimg = opt['bgimg']
-        self.activated = opt['activated']
-        self.deactivated = opt['deactivated']
-
+    def __create_map(self):
         self.map = MapContainer(
                 parent=self,
                 style={
@@ -192,15 +185,16 @@ class StageScene(Node):
                     'vertical-align': 'center'
                     },
                 opt={
-                    'map_size': self.map_size
+                    '$map size': self.map_size
                     }
                 )
         self.add_node(self.map)
-        cell_size = self.map.get_cell_size()
 
+    def __create_floor(self):
+        cell_size = self.map.get_cell_size()
         for x in xrange(0, self.map_size[0]):
             for y in xrange(0, self.map_size[1]):
-                def should_light_func(x, y):
+                def should_light(x, y):
                     return lambda node: (x, y) == self.map.get_cell(self.player)
 
                 floor = Floor(
@@ -211,11 +205,13 @@ class StageScene(Node):
                             'z-index': layers['floor']
                             },
                         opt={
-                            'should_light': should_light_func(x, y)
+                            '?should light': should_light(x, y)
                             }
                         )
                 self.map.add_node(floor, x, y)
 
+    def __create_player(self):
+        cell_size = self.map.get_cell_size()
         def move_player(node, dx, dy):
             map = self.map
             cell = map.get_cell(node)
@@ -254,15 +250,17 @@ class StageScene(Node):
                     'z-index': layers['object']
                     },
                 opt={
-                    'speed': 4.0,
-                    'move': move_player,
-                    'bomb': lambda node, count, power: 
+                    '$speed': 4.0,
+                    '@move': move_player,
+                    '@bomb': lambda node, count, power: 
                     self.place_bomb(*self.map.get_cell(node), count=count, power=power),
-                    'get_cell_size': lambda: self.map.get_cell_size()
+                    '?cell size': lambda: self.map.get_cell_size()
                     }
                 )
         self.map.add_node(self.player, 0, 0, 0, -cell_size)
 
+    def __create_blocks(self):
+        cell_size = self.map.get_cell_size()
         for x in xrange(1, self.map_size[0], 2):
             for y in xrange(1, self.map_size[1], 2):
                 block = HardBlock(
@@ -274,6 +272,19 @@ class StageScene(Node):
                         },
                     )
                 self.map.add_node(block, x, y, 0, -cell_size)
+
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
+        self.map_size = opt['$map size']
+        self.margin = opt['$margin']
+        self.bgimg = opt['$bgimg']
+        self.key_up = opt['@key up']
+        self.key_down = opt['@key down']
+
+        self.__create_map()
+        self.__create_floor()
+        self.__create_player()
+        self.__create_blocks()        
 
         self.box = MessageBox(
                 parent=self, 
@@ -312,33 +323,33 @@ class StageScene(Node):
         cr.paint_with_alpha(0.7)
 
     def on_tick(self, interval):
-        if self.activated(100):
+        if self.key_up(100):
             print self
-        elif self.activated(65361):
+        elif self.key_up(65361):
             self.player.stop()
             self.player.move('left')
-        elif self.activated(65362):
+        elif self.key_up(65362):
             self.player.stop()
             self.player.move('up')
-        elif self.activated(65363):
+        elif self.key_up(65363):
             self.player.stop()
             self.player.move('right')
-        elif self.activated(65364):
+        elif self.key_up(65364):
             self.player.stop()
             self.player.move('down')
-        elif self.deactivated(65361):
+        elif self.key_down(65361):
             self.player.stop('left')
-        elif self.deactivated(65362):
+        elif self.key_down(65362):
             self.player.stop('up')
-        elif self.deactivated(65363):
+        elif self.key_down(65363):
             self.player.stop('right')
-        elif self.deactivated(65364):
+        elif self.key_down(65364):
             self.player.stop('down')
 
-        if self.activated(32):
+        if self.key_up(32):
             self.box.toggle()
 
-        if self.activated(122):
+        if self.key_up(122):
             self.player.bomb()
 
     def place_bomb(self, x, y, count, power):
@@ -347,14 +358,11 @@ class StageScene(Node):
                 style={
                     'width': self.map.get_cell_size(),
                     'height': self.map.get_cell_size(),
-                    'z-index': layers['object']
-                    },
+                    'z-index': layers['object']},
                 opt={
-                    'count': count,
-                    'power': power,
-                    'destroy': lambda node: self.map.remove_node(node),
-                    'explode': lambda node: None
-                    }
-                )
+                    '$count': count,
+                    '$power': power,
+                    '@destroy': lambda node: self.map.remove_node(node),
+                    '@explode': lambda node: None})
         self.map.add_node(bomb, x, y)
         bomb.start_counting()

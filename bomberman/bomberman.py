@@ -325,6 +325,7 @@ class MapContainer(Node):
         self.__cell = {}
         self.__orig_size = {}
         self.__orig_delta = {}
+        self.__orig_z_index = {}
 
         self.__update_cell_size()
         self.__orig_cell_size = self.__cell_size
@@ -336,15 +337,14 @@ class MapContainer(Node):
                 (self.height - self.__cell_size * self.map_size[1]) / 2
                 )
 
-    def __update_pos(self, node, x, y, width, height):
+    def __update_pos(self, node, x, y, width, height, z_index):
         dx, dy = self.__delta[node]
         style = {
                 'left': x + dx,
                 'top': y + dy,
                 'width': width,
                 'height': height,
-                # XXX: preserve z-index, bad approach
-                'z-index': node.z_index
+                'z-index': z_index
                 }
         node.set_style(style)
 
@@ -361,8 +361,8 @@ class MapContainer(Node):
 
         return (x, y)
 
-    def __sort_children(self):
-        self.children.sort(key=lambda node: self.__cell[node][1])
+    def __get_z_index_delta(self, y):
+        return -y
 
     def on_resize(self):
         Node.on_resize(self)
@@ -381,7 +381,7 @@ class MapContainer(Node):
                     dx = dx * ratio
                     dy = dy * ratio
                     self.__delta[node] = (dx, dy)
-                    self.__update_pos(node, pos[0], pos[1], new_width, new_height)
+                    self.__update_pos(node, pos[0], pos[1], new_width, new_height, node.z_index)
     
     def get_cell_size(self):
         return self.__cell_size
@@ -393,10 +393,10 @@ class MapContainer(Node):
         self.__orig_delta[node] = self.__delta[node]
         self.__cell[node] = (x, y)
         self.__orig_size[node] = (node.width, node.height)
-        self.__sort_children()
+        self.__orig_z_index[node] = node.z_index
 
         pos = self.get_cell_pos(x, y)
-        self.__update_pos(node, pos[0], pos[1], node.width, node.height)
+        self.__update_pos(node, pos[0], pos[1], node.width, node.height, node.z_index + self.__get_z_index_delta(y))
 
     def remove_node(self, node):
         Node.remove_node(self, node)
@@ -406,6 +406,7 @@ class MapContainer(Node):
         del self.__orig_delta[node]
         del self.__cell[node]
         del self.__orig_size[node]
+        del self.__orig_z_index[node]
 
     def get_cell(self, node):
         return self.__cell[node]
@@ -418,10 +419,9 @@ class MapContainer(Node):
         self.__map[cell[0]][cell[1]].remove(node)
         self.__map[x][y].append(node)
         self.__cell[node] = (x, y)
-        self.__sort_children()
 
         pos = self.get_cell_pos(x, y)
-        self.__update_pos(node, pos[0], pos[1], node.width, node.height)
+        self.__update_pos(node, pos[0], pos[1], node.width, node.height, self.__orig_z_index[node] + self.__get_z_index_delta(y))
 
     def move_pos(self, node, delta_x, delta_y):
         dx, dy = self.__delta[node]
@@ -450,8 +450,7 @@ class MapContainer(Node):
         self.__map[old_cell[0]][old_cell[1]].remove(node)
         self.__map[new_cell[0]][new_cell[1]].append(node)
         self.__cell[node] = new_cell
-        self.__sort_children()
-        self.__update_pos(node, new_x, new_y, node.width, node.height)
+        self.__update_pos(node, new_x, new_y, node.width, node.height, self.__orig_z_index[node] + self.__get_z_index_delta(new_cell[1]))
 
     def get_cell_pos(self, x, y):
         return (

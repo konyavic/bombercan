@@ -392,35 +392,63 @@ class StageScene(Node):
         bomb.start_counting()
 
     def explode(self, x, y, power):
-        # show effect
         cell_size = self.map.get_cell_size()
+
+        # XXX
+        def search_and_break(nodes):
+            for n in nodes:
+                if isinstance(n, Block) and n.is_breakable:
+                    n.destroy()
+                    return (True, 0)
+                elif isinstance(n, Block) and not n.is_breakable:
+                    return (True, -1)
+
+            return (False, 0)
+
+        tmp_x, end = x, (False, 0)
+        for tmp_x in xrange(x, max(x - power - 1, 0), -1):
+            nodes = self.map.get_cell_nodes(tmp_x, y)
+            end = search_and_break(nodes)
+            if end[0]: break
+
+        left = x - tmp_x + end[1]
+
+        tmp_x, end = x, (False, 0)
+        for tmp_x in xrange(x, min(x + power + 1, self.map_size[0])):
+            nodes = self.map.get_cell_nodes(tmp_x, y)
+            end = search_and_break(nodes)
+            if end[0]: break
+
+        right = tmp_x - x + end[1]
+
+        tmp_y, end = y, (False, 0)
+        for tmp_y in xrange(y, max(y - power - 1, 0), -1):
+            nodes = self.map.get_cell_nodes(x, tmp_y)
+            end = search_and_break(nodes)
+            if end[0]: break
+
+        up = y - tmp_y + end[1]
+
+        tmp_y, end = y, (False, 0)
+        for tmp_y in xrange(y, min(y + power + 1, self.map_size[1])):
+            nodes = self.map.get_cell_nodes(x, tmp_y)
+            end = search_and_break(nodes)
+            if end[0]: break
+
+        down = tmp_y - y + end[1]
+                
+        # show effect
+        width = (left + right + 1) * cell_size
+        height = (up + down + 1) * cell_size
         explosion = ExplosionEffect(
                 parent=self.map,
                 style={
-                    'width': cell_size * (power + 1) * 2,
-                    'height': cell_size * (power + 1) * 2,
+                    'width': width,
+                    'height': height,
                     'z-index': layers['object'] },
                 opt={
-                    '$power': power,
+                    '$arms': (up, right, down, left),
                     '?cell size': lambda: self.map.get_cell_size(),
                     '@destroy': lambda node: self.map.remove_node(node) }
                 )
-        length = cell_size * power
-        self.map.add_node(explosion, x, y, -length, -length)
-
-        # XXX: break blocks
-        for tmp_x in xrange(
-                max(x - power, 0), 
-                min(x + power + 1, self.map_size[0] - 1)):
-            nodes = self.map.get_cell_nodes(tmp_x, y)
-            for n in nodes:
-                if isinstance(n, Block) and n.is_breakable:
-                    n.destroy()
-
-        for tmp_y in xrange(
-                max(y - power, 0), 
-                min(y + power + 1, self.map_size[1] - 1)):
-            nodes = self.map.get_cell_nodes(x, tmp_y)
-            for n in nodes:
-                if isinstance(n, Block) and n.is_breakable:
-                    n.destroy()
+        self.map.add_node(explosion, x, y, -left * cell_size, -up * cell_size)

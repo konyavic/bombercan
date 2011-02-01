@@ -15,6 +15,7 @@ from objects import Block
 from objects import HardBlock
 from objects import SoftBlock
 from objects import Player
+from objects import Enemy
 from objects import Floor
 from objects import MessageBox
 from effects import ExplosionEffect
@@ -230,6 +231,31 @@ class StageScene(Node):
                 )
         self.map.add_node(self.player, 0, 0, 0, -cell_size)
 
+    def __create_enemies(self, count):
+        cell_size = self.map.get_cell_size()
+        self.enemies = []
+
+        while count > 0:
+            x = int(random() * self.map_size[0])
+            y = int(random() * self.map_size[1])
+            if self.is_blocked(x, y):
+                continue
+
+            enemy = Enemy(
+                    parent=self.map,
+                    style={
+                        'width': cell_size, 
+                        'height': cell_size, 
+                        'z-index': layers['object'] },
+                    opt={
+                        '$speed': 2.0,
+                        '@move': self.move_object,
+                        '?cell size': lambda: self.map.get_cell_size() }
+                    )
+            self.map.add_node(enemy, x, y, 0, 0)
+            self.enemies.append(enemy)
+            count -= 1
+
     def __create_hard_blocks(self):
         cell_size = self.map.get_cell_size()
 
@@ -274,11 +300,13 @@ class StageScene(Node):
         self.bgimg = opt['$bgimg']
         self.key_up = opt['@key up']
         self.key_down = opt['@key down']
+        self.game_reset = opt['@game reset']
 
         self.__create_map()
         self.__create_floor()
         self.__create_player()
         self.__create_hard_blocks()        
+        self.__create_enemies(10)
         self.__create_soft_blocks(25)        
 
         self.__mark_destroy = set()
@@ -348,14 +376,39 @@ class StageScene(Node):
 
         # actual destroy of marked nodes
         for n in self.__mark_destroy:
+            n.destroy()
             self.map.remove_node(n)
 
         self.__mark_destroy = set()
+
+        # lose condition
+        cell = self.map.get_cell(self.player)
+        for e in self.enemies:
+            if cell == self.map.get_cell(e):
+                self.game_reset()
+
+        # win condition
+        if len(self.enemies) == 0:
+                self.game_reset()
 
     def is_blocked(self, x, y):
         if (0 <= x and x < self.map_size[0]
                 and 0 <= y and y < self.map_size[1]):
             return (len(self.map.get_cell_nodes(x, y)) > 1)
+        else:
+            return False
+
+    def is_move_blocked(self, node, x, y):
+        if (0 <= x and x < self.map_size[0]
+                and 0 <= y and y < self.map_size[1]):
+            for n in self.map.get_cell_nodes(x, y):
+                if (not isinstance(n, Floor)
+                        and not (isinstance(n, Player) and isinstance(node, Enemy))
+                        and not (isinstance(n, Enemy) and isinstance(node, Player))):
+                    return True
+
+            return False
+
         else:
             return False
 
@@ -365,16 +418,16 @@ class StageScene(Node):
         pos = map.get_node_pos(node)
         cell_size = map.get_cell_size()
 
-        if dx > 0 and self.is_blocked(cell[0] + 1, cell[1]):
+        if dx > 0 and self.is_move_blocked(node, cell[0] + 1, cell[1]):
             dx = min(map.get_cell_pos(*cell)[0] - pos[0], dx)
-        elif dx < 0 and self.is_blocked(cell[0] - 1, cell[1]):
+        elif dx < 0 and self.is_move_blocked(node, cell[0] - 1, cell[1]):
             dx = max(map.get_cell_pos(*cell)[0] - pos[0], dx)
         elif dx == 0:
             dx = map.get_cell_pos(*cell)[0] - pos[0]
         
-        if dy > 0 and self.is_blocked(cell[0], cell[1] + 1):
+        if dy > 0 and self.is_move_blocked(node, cell[0], cell[1] + 1):
             dy = min(map.get_cell_pos(*cell)[1] - pos[1], dy)
-        elif dy < 0 and self.is_blocked(cell[0], cell[1] - 1):
+        elif dy < 0 and self.is_move_blocked(node, cell[0], cell[1] - 1):
             dy = max(map.get_cell_pos(*cell)[1] - pos[1], dy)
         elif dy == 0:
             dy = map.get_cell_pos(*cell)[1] - pos[1]
@@ -410,6 +463,13 @@ class StageScene(Node):
                     return (True, -1)
                 elif isinstance(n, Bomb) and not (n in self.__mark_destroy):
                     n.explode()
+                elif isinstance(n, Enemy):
+                    self.__mark_destroy.add(n)
+                    if n in self.enemies:
+                        self.enemies.remove(n)
+                elif isinstance(n, Player):
+                    # XXX: game over
+                    self.game_reset()
 
             return (False, 0)
 

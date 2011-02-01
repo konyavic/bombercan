@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import math
+from random import random
 
 import gtk
 import gtk.gdk as gdk
@@ -82,6 +83,9 @@ class Bomb(Node):
     def explode(self):
         self.do_explode(self)
 
+    def destroy(self):
+        pass
+
 class Block(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
@@ -146,6 +150,8 @@ class SoftBlock(Block):
         cr.set_line_width(1)
         cr.stroke()
 
+    def destroy(self):
+        pass
 
 class Player(Node):
     def __init__(self, parent, style, opt):
@@ -302,6 +308,67 @@ class Player(Node):
 
     def bomb(self):
         self.do_bomb(self, 5, 3)
+
+    def destroy(self):
+        pass
+
+class Enemy(Node):
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
+        self.speed = opt['$speed']
+        self.do_move = opt['@move']
+        self.get_cell_size = opt['?cell size']
+
+        self.__timeout = 3.0
+        self.on_update()
+
+    def on_update(self):
+        cr = cairo.Context(self.surface)
+        self.clear_context(cr)
+        cr.move_to(self.width / 2, 0)
+        cr.line_to(self.width, self.height / 2)
+        cr.line_to(self.width / 2, self.height)
+        cr.line_to(0, self.height / 2)
+        cr.close_path()
+        cr.set_source_rgb(0.5, 0, 0.5)
+        cr.fill_preserve()
+        cr.set_line_width(1.5)
+        cr.stroke()
+
+    def on_tick(self, interval):
+        self.__timeout += interval
+        if self.__timeout > 3.0:
+            self.__timeout = 0.0
+        else:
+            return
+
+        dir = ['up', 'down', 'left', 'right'][int(random() * 4)]
+        self.stop()
+        self.move(dir)
+    
+    def move(self, dir):
+        def move_action(self, interval):
+            delta = interval * self.speed * self.get_cell_size()
+            if dir == 'up':
+                self.do_move(self, 0, -delta)
+            elif dir == 'down':
+                self.do_move(self, 0, delta)
+            elif dir == 'left':
+                self.do_move(self, -delta, 0)
+            elif dir == 'right':
+                self.do_move(self, delta, 0)
+
+        self.add_action(dir, move_action, loop=True, update=False)
+
+    def stop(self, dir=None):
+        if dir:
+            self.remove_action(dir)
+        else:
+            for dir in ['up', 'down', 'left', 'right']:
+                self.remove_action(dir)
+
+    def destroy(self):
+        pass
 
 class Floor(Node):
     def __init__(self, parent, style, opt):

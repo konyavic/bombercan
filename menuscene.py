@@ -149,9 +149,9 @@ class MenuScene(Node):
         Node.__init__(self, parent, style)
 
         self.bgimg = opt['$bgimg']
-        self.start_game = opt['@start game']
         self.key_up = opt['@key up']
         self.key_down = opt['@key down']
+        self.game_start = opt['@game start']
 
         # sub-nodes
         self.sel = Selections(
@@ -216,5 +216,5 @@ class MenuScene(Node):
             self.sel.select_down()
 
         if self.key_up('space'):
-            self.start_game()
+            self.game_start()
 

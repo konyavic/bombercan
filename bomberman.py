@@ -32,33 +32,38 @@ class Bomberman(Game):
     def __init__(self):
         Game.__init__(self, 'Bomberman', 500, 500, 80)
 
-        stage = StageScene(
-                parent=self,
-                style={},
-                opt={
-                    '$map size': [15, 15], 
-                    '$margin': [20, 20, 20, 20],
-                    '$bgimg': 'stage_bg.png',
-                    '@key up': self.key_up,
-                    '@key down': self.key_down
-                    }
-                )
-
-        def start_game():
-            self.top_node=stage
+        def game_start():
+            self.top_node=self.stage
             self.top_node.do_resize_recursive()
 
-        menu = MenuScene(
+        def game_reset():
+            self.top_node=self.menu
+            self.top_node.do_resize_recursive()
+
+            self.stage = StageScene(
+                    parent=self,
+                    style={},
+                    opt={
+                        '$map size': [15, 15], 
+                        '$margin': [20, 20, 20, 20],
+                        '$bgimg': 'stage_bg.png',
+                        '@key up': self.key_up,
+                        '@key down': self.key_down,
+                        '@game reset': game_reset}
+                    )
+
+
+        self.menu = MenuScene(
                 parent=self,
                 style={},
                 opt={
                     '$bgimg': 'menu_bg.png',
                     '@key up': self.key_up,
                     '@key down': self.key_down,
-                    '@start game': start_game
-                    }
+                    '@game start': game_start}
                 )
-        self.top_node = menu
+
+        game_reset()
 
     def on_tick(self, interval):
         print_fps()

@@ -327,10 +327,12 @@ class Game:
     def quit(self):
         self.__quit = True
 
-    def key_up(self, key):
+    def key_up(self, keyname):
+        key = gdk.keyval_from_name(keyname)
         return not (key in self.__keymap) and (key in self.__next_keymap)
 
-    def key_down(self, key):
+    def key_down(self, keyname):
+        key = gdk.keyval_from_name(keyname)
         return (key in self.__keymap) and not (key in self.__next_keymap)
 
     def on_tick(self, interval):

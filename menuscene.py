@@ -177,7 +177,7 @@ class MenuScene(Node):
                     'align': 'center'
                     },
                 opt={
-                    '$text': u'ボン・バーマン',
+                    '$text': u'ボンバーマンのような何か',
                     '$font': 'Meiryo, MS Gothic bold 30',
                     '$color': (1, 1, 0.3, 1),
                     }
@@ -209,11 +209,11 @@ class MenuScene(Node):
         cr.paint_with_alpha(0.7)
 
     def on_tick(self, interval):
-        if self.key_up(65362):
+        if self.key_up('Up'):
             self.sel.select_up()
-        elif self.key_up(65364):
+        elif self.key_up('Down'):
             self.sel.select_down()
 
-        if self.key_up(32):
+        if self.key_up('space'):
             self.start_game()
 

@@ -84,11 +84,19 @@ class Bomb(Node):
         self.do_explode(self)
         self.do_destroy(self)
 
-class HardBlock(Node):
-    def __init__(self, parent, style):
+class Block(Node):
+    def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
+        self.is_breakable = opt['$breakable']
+        if opt.has_key('@destroy'):
+            self.do_destroy = opt['@destroy']
+
         self.on_update()
 
+    def destroy(self):
+        self.do_destroy(self)
+
+class HardBlock(Block):
     def on_update(self):
         cr = cairo.Context(self.surface)
         self.clear_context(cr)
@@ -109,6 +117,43 @@ class HardBlock(Node):
         cr.set_line_width(3)
         cr.set_source_rgb(0, 0, 0)
         cr.stroke()
+
+class SoftBlock(Block):
+    def on_update(self):
+        width, height = self.width, self.height
+        cr = cairo.Context(self.surface)
+        self.clear_context(cr)
+        cr.move_to(width * 0.2, height * 0.85)
+        cr.rel_curve_to(
+                width * 0.2, height * 0.07, 
+                width * 0.4, height * 0.07, 
+                width * 0.6, 0 
+                )
+        cr.rel_line_to(0, -height * 0.4)
+        cr.rel_curve_to(
+                -(width * 0.2), -(height * 0.07), 
+                -(width * 0.4), -(height * 0.07), 
+                -(width * 0.6), 0 
+                )
+        cr.close_path()
+
+        cr.set_source_rgb(0.5, 0.5, 0.5)
+        cr.fill_preserve()
+        cr.set_source_rgb(0, 0, 0)
+        cr.set_line_width(1.5)
+        cr.stroke()
+
+        cr.move_to(width * 0.2, height * 0.45)
+        cr.rel_curve_to(
+                width * 0.2, height * 0.07, 
+                width * 0.4, height * 0.07, 
+                width * 0.6, 0 
+                )
+
+        cr.set_source_rgb(0, 0, 0)
+        cr.set_line_width(1)
+        cr.stroke()
+
 
 class Player(Node):
     def __init__(self, parent, style, opt):

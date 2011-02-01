@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import math
+from random import random
 
 import gtk
 import gtk.gdk as gdk
@@ -10,10 +11,13 @@ import cairo
 
 from pnode import Node
 from objects import Bomb
+from objects import Block
 from objects import HardBlock
+from objects import SoftBlock
 from objects import Player
 from objects import Floor
 from objects import MessageBox
+from effects import ExplosionEffect
 
 # z-index table
 layers = {
@@ -159,7 +163,8 @@ class MapContainer(Node):
         self.__map[old_cell[0]][old_cell[1]].remove(node)
         self.__map[new_cell[0]][new_cell[1]].append(node)
         self.__cell[node] = new_cell
-        self.__update_pos(node, new_x, new_y, node.width, node.height, self.__orig_z_index[node] + self.__get_z_index_delta(new_cell[1]))
+        self.__update_pos(node, new_x, new_y, node.width, node.height, 
+                self.__orig_z_index[node] + self.__get_z_index_delta(new_cell[1]))
 
     def get_cell_pos(self, x, y):
         return (
@@ -182,16 +187,15 @@ class StageScene(Node):
                     'left': self.margin[3],
                     'aspect': 1.0,
                     'align': 'center',
-                    'vertical-align': 'center'
-                    },
+                    'vertical-align': 'center' },
                 opt={
-                    '$map size': self.map_size
-                    }
+                    '$map size': self.map_size }
                 )
         self.add_node(self.map)
 
     def __create_floor(self):
         cell_size = self.map.get_cell_size()
+
         for x in xrange(0, self.map_size[0]):
             for y in xrange(0, self.map_size[1]):
                 def should_light(x, y):
@@ -202,65 +206,33 @@ class StageScene(Node):
                         style={
                             'width': cell_size,
                             'height': cell_size,
-                            'z-index': layers['floor']
-                            },
+                            'z-index': layers['floor'] },
                         opt={
-                            '?should light': should_light(x, y)
-                            }
+                            '?should light': should_light(x, y) }
                         )
                 self.map.add_node(floor, x, y)
 
     def __create_player(self):
         cell_size = self.map.get_cell_size()
-        def move_player(node, dx, dy):
-            map = self.map
-            cell = map.get_cell(node)
-            pos = map.get_node_pos(node)
-            cell_size = map.get_cell_size()
-
-            if (dx > 0 
-                    and cell[0] < (self.map_size[0] - 1) 
-                    and len(map.get_cell_nodes(cell[0] + 1, cell[1])) > 1):
-                dx = min(map.get_cell_pos(*cell)[0] - pos[0], dx)
-            elif (dx < 0 
-                    and cell[0] > 0 
-                    and len(map.get_cell_nodes(cell[0] - 1, cell[1])) > 1):
-                dx = max(map.get_cell_pos(*cell)[0] - pos[0], dx)
-            elif dx == 0:
-                dx = map.get_cell_pos(*cell)[0] - pos[0]
-            
-            if (dy > 0 
-                    and cell[1] < (self.map_size[1] - 1) 
-                    and len(map.get_cell_nodes(cell[0], cell[1] + 1)) > 1):
-                dy = min(map.get_cell_pos(*cell)[1] - pos[1], dy)
-            elif (dy < 0 
-                    and cell[1] > 0 
-                    and len(map.get_cell_nodes(cell[0], cell[1] - 1)) > 1):
-                dy = max(map.get_cell_pos(*cell)[1] - pos[1], dy)
-            elif dy == 0:
-                dy = map.get_cell_pos(*cell)[1] - pos[1]
-
-            map.move_pos(node, dx, dy)
 
         self.player = Player(
                 parent=self.map,
                 style={
                     'width': cell_size, 
                     'height': cell_size * 2, 
-                    'z-index': layers['object']
-                    },
+                    'z-index': layers['object'] },
                 opt={
                     '$speed': 4.0,
-                    '@move': move_player,
-                    '@bomb': lambda node, count, power: 
-                    self.place_bomb(*self.map.get_cell(node), count=count, power=power),
-                    '?cell size': lambda: self.map.get_cell_size()
-                    }
+                    '@move': self.move_object,
+                    '@bomb': (lambda node, count, power:
+                        self.place_bomb(*self.map.get_cell(node), count=count, power=power)),
+                    '?cell size': lambda: self.map.get_cell_size() }
                 )
         self.map.add_node(self.player, 0, 0, 0, -cell_size)
 
-    def __create_blocks(self):
+    def __create_hard_blocks(self):
         cell_size = self.map.get_cell_size()
+
         for x in xrange(1, self.map_size[0], 2):
             for y in xrange(1, self.map_size[1], 2):
                 block = HardBlock(
@@ -268,10 +240,33 @@ class StageScene(Node):
                     style={
                         'width': cell_size, 
                         'height': cell_size * 2, 
-                        'z-index': layers['object']
-                        },
+                        'z-index': layers['object'] },
+                    opt={
+                        '$breakable': False }
                     )
                 self.map.add_node(block, x, y, 0, -cell_size)
+
+    def __create_soft_blocks(self, count):
+        cell_size = self.map.get_cell_size()
+
+        while count > 0:
+            x = int(random() * self.map_size[0])
+            y = int(random() * self.map_size[1])
+            if self.is_blocked(x, y):
+                continue
+
+            block = SoftBlock(
+                    parent=self.map,
+                    style={
+                        'width': cell_size, 
+                        'height': cell_size * 2, 
+                        'z-index': layers['object'] },
+                    opt={
+                        '$breakable': True,
+                        '@destroy': lambda node: self.map.remove_node(node) }
+                    )
+            self.map.add_node(block, x, y, 0, -cell_size)
+            count -= 1
 
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
@@ -284,7 +279,8 @@ class StageScene(Node):
         self.__create_map()
         self.__create_floor()
         self.__create_player()
-        self.__create_blocks()        
+        self.__create_hard_blocks()        
+        self.__create_soft_blocks(25)        
 
         self.box = MessageBox(
                 parent=self, 
@@ -293,8 +289,7 @@ class StageScene(Node):
                     'height': '33%',
                     'align': 'center',
                     'vertical-align': 'center',
-                    'z-index': -500
-                    },
+                    'z-index': -500 },
                 opt=None)
         self.add_node(self.box)
 
@@ -323,46 +318,109 @@ class StageScene(Node):
         cr.paint_with_alpha(0.7)
 
     def on_tick(self, interval):
-        if self.key_up(100):
-            print self
-        elif self.key_up(65361):
+        if self.key_up('Left'):
             self.player.stop()
             self.player.move('left')
-        elif self.key_up(65362):
+        elif self.key_up('Up'):
             self.player.stop()
             self.player.move('up')
-        elif self.key_up(65363):
+        elif self.key_up('Right'):
             self.player.stop()
             self.player.move('right')
-        elif self.key_up(65364):
+        elif self.key_up('Down'):
             self.player.stop()
             self.player.move('down')
-        elif self.key_down(65361):
+        elif self.key_down('Left'):
             self.player.stop('left')
-        elif self.key_down(65362):
+        elif self.key_down('Up'):
             self.player.stop('up')
-        elif self.key_down(65363):
+        elif self.key_down('Right'):
             self.player.stop('right')
-        elif self.key_down(65364):
+        elif self.key_down('Down'):
             self.player.stop('down')
 
-        if self.key_up(32):
+        if self.key_up('space'):
             self.box.toggle()
 
-        if self.key_up(122):
+        if self.key_up('z'):
             self.player.bomb()
 
+    def is_blocked(self, x, y):
+        if (0 <= x and x < self.map_size[0]
+                and 0 <= y and y < self.map_size[1]):
+            return (len(self.map.get_cell_nodes(x, y)) > 1)
+        else:
+            return False
+
+    def move_object(self, node, dx, dy):
+        map = self.map
+        cell = map.get_cell(node)
+        pos = map.get_node_pos(node)
+        cell_size = map.get_cell_size()
+
+        if dx > 0 and self.is_blocked(cell[0] + 1, cell[1]):
+            dx = min(map.get_cell_pos(*cell)[0] - pos[0], dx)
+        elif dx < 0 and self.is_blocked(cell[0] - 1, cell[1]):
+            dx = max(map.get_cell_pos(*cell)[0] - pos[0], dx)
+        elif dx == 0:
+            dx = map.get_cell_pos(*cell)[0] - pos[0]
+        
+        if dy > 0 and self.is_blocked(cell[0], cell[1] + 1):
+            dy = min(map.get_cell_pos(*cell)[1] - pos[1], dy)
+        elif dy < 0 and self.is_blocked(cell[0], cell[1] - 1):
+            dy = max(map.get_cell_pos(*cell)[1] - pos[1], dy)
+        elif dy == 0:
+            dy = map.get_cell_pos(*cell)[1] - pos[1]
+
+        map.move_pos(node, dx, dy)
+
     def place_bomb(self, x, y, count, power):
+        cell_size = self.map.get_cell_size()
         bomb = Bomb(
                 parent=self.map,
                 style={
-                    'width': self.map.get_cell_size(),
-                    'height': self.map.get_cell_size(),
-                    'z-index': layers['object']},
+                    'width': cell_size,
+                    'height': cell_size,
+                    'z-index': layers['object'] },
                 opt={
                     '$count': count,
                     '$power': power,
                     '@destroy': lambda node: self.map.remove_node(node),
-                    '@explode': lambda node: None})
+                    '@explode': lambda node: self.explode(x, y, power) } 
+                )
         self.map.add_node(bomb, x, y)
         bomb.start_counting()
+
+    def explode(self, x, y, power):
+        # show effect
+        cell_size = self.map.get_cell_size()
+        explosion = ExplosionEffect(
+                parent=self.map,
+                style={
+                    'width': cell_size * (power + 1) * 2,
+                    'height': cell_size * (power + 1) * 2,
+                    'z-index': layers['object'] },
+                opt={
+                    '$power': power,
+                    '?cell size': lambda: self.map.get_cell_size(),
+                    '@destroy': lambda node: self.map.remove_node(node) }
+                )
+        length = cell_size * power
+        self.map.add_node(explosion, x, y, -length, -length)
+
+        # XXX: break blocks
+        for tmp_x in xrange(
+                max(x - power, 0), 
+                min(x + power + 1, self.map_size[0] - 1)):
+            nodes = self.map.get_cell_nodes(tmp_x, y)
+            for n in nodes:
+                if isinstance(n, Block) and n.is_breakable:
+                    n.destroy()
+
+        for tmp_y in xrange(
+                max(y - power, 0), 
+                min(y + power + 1, self.map_size[1] - 1)):
+            nodes = self.map.get_cell_nodes(x, tmp_y)
+            for n in nodes:
+                if isinstance(n, Block) and n.is_breakable:
+                    n.destroy()

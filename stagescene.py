@@ -262,8 +262,7 @@ class StageScene(Node):
                         'height': cell_size * 2, 
                         'z-index': layers['object'] },
                     opt={
-                        '$breakable': True,
-                        '@destroy': lambda node: self.map.remove_node(node) }
+                        '$breakable': True}
                     )
             self.map.add_node(block, x, y, 0, -cell_size)
             count -= 1
@@ -281,6 +280,8 @@ class StageScene(Node):
         self.__create_player()
         self.__create_hard_blocks()        
         self.__create_soft_blocks(25)        
+
+        self.__mark_destroy = set()
 
         self.box = MessageBox(
                 parent=self, 
@@ -345,6 +346,12 @@ class StageScene(Node):
         if self.key_up('z'):
             self.player.bomb()
 
+        # actual destroy of marked nodes
+        for n in self.__mark_destroy:
+            self.map.remove_node(n)
+
+        self.__mark_destroy = set()
+
     def is_blocked(self, x, y):
         if (0 <= x and x < self.map_size[0]
                 and 0 <= y and y < self.map_size[1]):
@@ -385,28 +392,29 @@ class StageScene(Node):
                 opt={
                     '$count': count,
                     '$power': power,
-                    '@destroy': lambda node: self.map.remove_node(node),
-                    '@explode': lambda node: self.explode(x, y, power) } 
+                    '@explode': lambda node: self.explode(node, x, y, power) } 
                 )
         self.map.add_node(bomb, x, y)
         bomb.start_counting()
 
-    def explode(self, x, y, power):
+    def explode(self, node, x, y, power):
+        self.__mark_destroy.add(node)
         cell_size = self.map.get_cell_size()
 
-        # XXX
         def search_and_break(nodes):
             for n in nodes:
                 if isinstance(n, Block) and n.is_breakable:
-                    n.destroy()
+                    self.__mark_destroy.add(n)
                     return (True, 0)
                 elif isinstance(n, Block) and not n.is_breakable:
                     return (True, -1)
+                elif isinstance(n, Bomb) and not (n in self.__mark_destroy):
+                    n.explode()
 
             return (False, 0)
 
         tmp_x, end = x, (False, 0)
-        for tmp_x in xrange(x, max(x - power - 1, 0), -1):
+        for tmp_x in xrange(x, max(x - power - 1, -1), -1):
             nodes = self.map.get_cell_nodes(tmp_x, y)
             end = search_and_break(nodes)
             if end[0]: break
@@ -422,7 +430,7 @@ class StageScene(Node):
         right = tmp_x - x + end[1]
 
         tmp_y, end = y, (False, 0)
-        for tmp_y in xrange(y, max(y - power - 1, 0), -1):
+        for tmp_y in xrange(y, max(y - power - 1, -1), -1):
             nodes = self.map.get_cell_nodes(x, tmp_y)
             end = search_and_break(nodes)
             if end[0]: break

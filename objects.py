@@ -24,7 +24,6 @@ class Bomb(Node):
 
         # dependent functions
         self.do_explode = opt['@explode']
-        self.do_destroy = opt['@destroy']
 
         # private attributes
         self.__scale = 1.0
@@ -82,19 +81,12 @@ class Bomb(Node):
 
     def explode(self):
         self.do_explode(self)
-        self.do_destroy(self)
 
 class Block(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
         self.is_breakable = opt['$breakable']
-        if opt.has_key('@destroy'):
-            self.do_destroy = opt['@destroy']
-
         self.on_update()
-
-    def destroy(self):
-        self.do_destroy(self)
 
 class HardBlock(Block):
     def on_update(self):

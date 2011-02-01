@@ -164,7 +164,8 @@ class MenuScene(Node):
                     },
                 opt={
                     '$font': 'Meiryo, MS Gothic 18',
-                    '$labels': [u'スタート', u'オプション', u'（゜д゜;;'],
+                    #'$labels': [u'スタート', u'オプション', u'（゜д゜;;'],
+                    '$labels': [u'Press Space'],
                     '$bgcolor': (0.3, 0.3, 0.7, 0.7)
                     }
                 )

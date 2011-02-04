@@ -7,26 +7,8 @@ from pnode import Game
 from menuscene import MenuScene
 from stagescene import StageScene
 
-fps_counters = [0 for i in range(0, 5)]
-fps_cur_counter = 0
-last_time = time.time()
+from printfps import printfps
 
-def print_fps():
-    global fps_counter, fps_cur_counter, last_time
-    cur_time = time.time()
-    elapsed_time = cur_time - last_time
-    if elapsed_time > 1:
-        last_time = cur_time
-        fps_cur_counter = (fps_cur_counter + 1) % 5
-
-        total_count = 0
-        for count in fps_counters:
-            total_count += count
-
-        print 'fps =', float(total_count) / 5
-        fps_counters[fps_cur_counter] = 1   # reset
-    else:
-        fps_counters[fps_cur_counter] += 1
 
 class Bomberman(Game):
     def __init__(self):
@@ -65,8 +47,9 @@ class Bomberman(Game):
 
         game_reset()
 
+    @printfps()
     def on_tick(self, interval):
-        print_fps()
+        pass
 
 if __name__ == '__main__':
     game = Bomberman()

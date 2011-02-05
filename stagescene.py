@@ -12,7 +12,7 @@ import cairo
 from pnode import Node
 from objects import *
 from effects import *
-from containers import *
+from uicomponents import *
 from stagecontroller import *
 
 # z-index table
@@ -66,6 +66,7 @@ class StageScene(Node):
                     'height': cell_size * 2, 
                     'z-index': layers['object'] }
                 )
+        # player(blocking(obj))
         make_character(self, obj, 
                 on_move=lambda dir: obj.move_animation(dir),
                 on_stop=lambda dir: obj.remove_animation(dir))
@@ -84,10 +85,11 @@ class StageScene(Node):
                     'height': cell_size, 
                     'z-index': layers['object'] }
                 )
+        # enemy(fatal(blocking(obj)))
+        fatal(blocking(obj))
         make_character(self, obj, speed=3.0)
         make_breakable(self, obj,
                 on_die=lambda: self.dec_enemy_count())
-        fatal(blocking(obj))
         make_simpleai(self, obj)
         self.map.add_node(obj, x, y, 0, 0)
         return obj

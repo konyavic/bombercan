@@ -5,8 +5,11 @@ import gtk
 import gtk.gdk as gdk
 import gobject
 import cairo
+import pango
+import pangocairo
 
 from pnode import Node
+from objects import Bomb
 
 class MapContainer(Node):
     def __init__(self, parent, style, opt):
@@ -158,3 +161,170 @@ class MapContainer(Node):
     def get_node_pos(self, node):
         delta = self.__delta[node]
         return (node.x - delta[0], node.y - delta[1])
+
+class Label(Node):
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
+        self.text = opt['$text']
+        self.color = opt['$color']
+        if opt.has_key('$font'):
+            self.font = opt['$font']
+            self.__font = pango.FontDescription(self.font)
+
+        if opt.has_key('$bgcolor'):
+            self.bgcolor = opt['$bgcolor']
+        else:
+            self.bgcolor = (0, 0, 0, 0)
+
+        self.on_update()
+
+    def set_text(self, text):
+        self.text = text
+        self.on_update()
+
+    def get_size(self):
+        cr = cairo.Context(self.surface)
+        pcr = pangocairo.CairoContext(cr)
+        layout = pcr.create_layout()
+        layout.set_text(self.text)
+        layout.set_font_description(self.__font)
+        return layout.get_pixel_size()
+
+    def on_update(self):
+        size = self.get_size()
+        self.style['width'], self.style['height'] = size
+        self.set_style(self.style)
+        self.reset_surface()
+
+        cr = cairo.Context(self.surface)
+        cr.set_source_rgba(*self.bgcolor)
+        cr.paint()
+
+        cr.set_source_rgba(*self.color)
+        cr.move_to(0, 0)
+        pcr = pangocairo.CairoContext(cr)
+        layout = pcr.create_layout()
+        layout.set_text(self.text)
+        layout.set_font_description(self.__font)
+        pcr.show_layout(layout)
+    
+class Selections(Node):
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
+
+        # input attributes
+        self.labels = opt['$labels']
+        if opt.has_key('$font'):
+            self.font = opt['$font']
+
+        if opt.has_key('$bgcolor'):
+            self.bgcolor = opt['$bgcolor']
+        else:
+            self.bgcolor = (0, 0, 0, 0)
+
+        # sub-nodes
+        self.labels = [ Label(
+            parent=self,
+            style={
+                'top': str((i + 1) * 100 / float(len(self.labels) + 2)) + '%',
+                'align': 'center'
+                },
+            opt={
+                '$text': self.labels[i],
+                '$color': (1, 1, 1, 1),
+                '$font': self.font
+                }
+            ) for i in range(0, len(self.labels)) ]
+
+        for label in self.labels:
+            self.add_node(label)
+
+        self.curser = Bomb(
+                parent=self,
+                style={
+                    'top': self.labels[0].y,
+                    'left': self.labels[0].x - self.labels[0].height / 2,
+                    'width': self.labels[0].height,
+                    'height': self.labels[0].height }
+                )
+        self.curser.counting()
+        self.add_node(self.curser)
+        self.select(0)
+
+        self.on_update()
+
+    def on_update(self):
+        cr = cairo.Context(self.surface)
+        cr.set_source_rgba(*self.bgcolor)
+        cr.paint()
+
+    def on_resize(self):
+        Node.on_resize(self)
+        self.labels[self.selected].on_resize()
+        self.select(self.selected)
+
+    def select(self, i):
+        self.selected = i
+        self.curser.set_style({
+            'top': self.labels[i].y,
+            'left': self.labels[i].x - self.labels[i].height,
+            'width': self.labels[i].height,
+            'height': self.labels[i].height,
+            })
+
+    def select_up(self):
+        i = self.selected - 1
+        if i < 0:
+            i = len(self.labels) - 1
+
+        self.select(i)
+
+    def select_down(self):
+        i = self.selected + 1
+        if i >= len(self.labels):
+            i = 0
+
+        self.select(i)
+
+class MessageBox(Node):
+    def __init__(self, parent, style, opt):
+        Node.__init__(self, parent, style)
+        self.showing = False
+        self.on_update()
+
+    def __draw_box(self, box_width, box_height, alpha):
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        cr = cairo.Context(self.surface)
+        cr.set_source_rgba(0, 0, 0, alpha)
+        cr.rectangle(0, 0, box_width, box_height)
+        cr.fill()
+
+    def on_update(self):
+        if self.showing:
+            self.__draw_box(self.width, self.height, 0.5)
+        else:
+            self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+
+    def show(self, b):
+        def show_animation(self, phase):
+            self.__draw_box(
+                    self.width * 2 * min(0.5, phase), 
+                    self.height * 2 * max(0.05, phase - 0.5), 
+                    0.5 * phase)
+
+        def hide_animation(self, phase):
+            self.__draw_box(self.width*(1-phase), self.height*(1-phase), 0.5*(1-phase))
+
+        self.showing = b
+        if b:
+            self.remove_animation('hide')
+            self.add_animation('show', show_animation, delay=0, period=0.5, loop=False)
+        else:
+            self.remove_animation('show')
+            self.add_animation('hide', hide_animation, delay=0, period=0.1, loop=False)
+
+    def toggle(self):
+        if self.showing:
+            self.show(False)
+        else:
+            self.show(True)

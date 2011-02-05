@@ -147,7 +147,7 @@ class SoftBlock(Node):
     def destroy(self):
         pass
 
-class Player(Node):
+class Can(Node):
     def __draw_feet(self, cr, x, y, inverse=1):
         width, height = self.width, self.height
         cr.move_to(x, y)
@@ -271,16 +271,7 @@ class Player(Node):
         
         self.add_animation(dir, _move_animation, loop=True, delay=0, period=0.2)
 
-class Enemy(Node):
-    def __init__(self, parent, style, opt):
-        Node.__init__(self, parent, style)
-        self.speed = opt['$speed']
-        self.do_move = opt['@move']
-        self.get_cell_size = opt['?cell size']
-
-        self.__timeout = 3.0
-        self.on_update()
-
+class Bishi(Node):
     def on_update(self):
         cr = cairo.Context(self.surface)
         self.clear_context(cr)
@@ -293,41 +284,6 @@ class Enemy(Node):
         cr.fill_preserve()
         cr.set_line_width(1.5)
         cr.stroke()
-
-    def on_tick(self, interval):
-        self.__timeout += interval
-        if self.__timeout > 3.0:
-            self.__timeout = 0.0
-        else:
-            return
-
-        dir = ['up', 'down', 'left', 'right'][int(random() * 4)]
-        self.stop()
-        self.move(dir)
-    
-    def move(self, dir):
-        def move_action(self, interval):
-            delta = interval * self.speed * self.get_cell_size()
-            if dir == 'up':
-                self.do_move(self, 0, -delta)
-            elif dir == 'down':
-                self.do_move(self, 0, delta)
-            elif dir == 'left':
-                self.do_move(self, -delta, 0)
-            elif dir == 'right':
-                self.do_move(self, delta, 0)
-
-        self.add_action(dir, move_action, loop=True, update=False)
-
-    def stop(self, dir=None):
-        if dir:
-            self.remove_action(dir)
-        else:
-            for dir in ['up', 'down', 'left', 'right']:
-                self.remove_action(dir)
-
-    def destroy(self):
-        pass
 
 class Floor(Node):
     def __init__(self, parent, style, opt):

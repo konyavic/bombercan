@@ -3,7 +3,6 @@
 
 import math
 from random import random
-from new import instancemethod
 
 import gtk
 import gtk.gdk as gdk
@@ -11,123 +10,16 @@ import gobject
 import cairo
 
 from pnode import Node
-from objects import Bomb
-from objects import HardBlock
-from objects import SoftBlock
-from objects import Player
-from objects import Enemy
-from objects import Floor
-from objects import MessageBox
-from effects import ExplosionEffect
-from containers import MapContainer
+from objects import *
+from effects import *
+from containers import *
+from stagecontroller import *
 
 # z-index table
 layers = {
         'floor': -100,
         'object': -300
         }
-
-BLOCKING    = 1 << 0
-FATAL       = 1 << 1
-BREAKABLE   = 1 << 2
-CHARACTER   = 1 << 3
-
-def stageobj(flag, obj):
-    try:
-        obj.stageobj_flags |= flag
-    except AttributeError:
-        obj.stageobj_flags = flag
-
-    return obj
-
-def stageobj_has_flag(flag, obj):
-    try:
-        return obj.stageobj_flags
-    except AttributeError:
-        obj.stageobj_flags = 0
-        return False
-
-def blocking(obj):
-    return stageobj(BLOCKING, obj)
-
-def is_blocking(obj):
-    return stageobj_has_flag(BLOCKING, obj)
-
-def fatal(obj):
-    return stageobj(FATAL, obj)
-
-def is_fatal(obj):
-    return stageobj_has_flag(FATAL, obj)
-
-def breakable(obj):
-    return stageobj(BREAKABLE, obj)
-
-def is_breakable(obj):
-    return stageobj_has_flag(BREAKABLE, obj)
-
-def character(obj):
-    return stageobj(CHARACTER, obj)
-
-def is_character(obj):
-    return stageobj_has_flag(CHARACTER, obj)
-
-def make_player(stage, node, 
-        speed=4.0, bomb_delay=5, bomb_power=2, bomb_count=1,
-        on_move=None, on_stop=None, on_die=None, on_bomb=None):
-
-    stageobj(BREAKABLE | BLOCKING | CHARACTER, node)
-    node.speed = speed
-    node.bomb_delay = bomb_delay
-    node.bomb_power = bomb_power
-    node.bomb_count = bomb_count
-
-    def move(self, dir):
-        def move_action(self, interval):
-            delta = interval * self.speed * stage.map.get_cell_size()
-            if dir == 'up':
-                stage.move_object(self, 0, -delta)
-            elif dir == 'down':
-                stage.move_object(self, 0, delta)
-            elif dir == 'left':
-                stage.move_object(self, -delta, 0)
-            elif dir == 'right':
-                stage.move_object(self, delta, 0)
-
-        self.add_action(dir, move_action, loop=True, update=False)
-        if on_move: on_move(dir)
-    
-    def stop(self, dir=None):
-        if dir:
-            self.remove_action(dir)
-            if on_stop: on_stop(dir)
-        else:
-            self.remove_action('up')
-            self.remove_action('down')
-            self.remove_action('right')
-            self.remove_action('left')
-            if on_stop: 
-                on_stop('up')
-                on_stop('down')
-                on_stop('right')
-                on_stop('left')
-
-
-    def die(self):
-        if on_die: on_die()
-
-    def bomb(self):
-        stage.place_bomb(*stage.map.get_cell(self), 
-                delay=self.bomb_delay, power=self.bomb_power)
-
-        if on_bomb: on_bomb()
-
-    node.move = instancemethod(move, node)
-    node.stop = instancemethod(stop, node)
-    node.die = instancemethod(die, node)
-    node.bomb = instancemethod(bomb, node)
-
-def make_enemy():
-    pass
 
 class StageScene(Node):
     def __create_map(self):
@@ -165,23 +57,37 @@ class StageScene(Node):
                         )
                 self.map.add_node(floor, x, y)
 
-    def __create_player(self):
+    def create_player(self, x, y):
         cell_size = self.map.get_cell_size()
-
-        self.player = Player(
+        obj = Can(
                 parent=self.map,
                 style={
                     'width': cell_size, 
                     'height': cell_size * 2, 
                     'z-index': layers['object'] }
                 )
-        make_player(self, self.player, 
-                on_move=lambda dir: self.player.move_animation(dir),
-                on_stop=lambda dir: self.player.remove_animation(dir))
-        self.map.add_node(self.player, 0, 0, 0, -cell_size)
+        character(self, obj, 
+                on_move=lambda dir: obj.move_animation(dir),
+                on_stop=lambda dir: obj.remove_animation(dir))
+        bombmaker(self, obj)
+        self.map.add_node(obj, x, y, 0, -cell_size)
+        return obj
 
-    def __create_enemies(self, count):
+    def create_enemy(self, x, y):
         cell_size = self.map.get_cell_size()
+        obj = Bishi(
+                parent=self.map,
+                style={
+                    'width': cell_size, 
+                    'height': cell_size, 
+                    'z-index': layers['object'] }
+                )
+        character(self, obj, speed=1.0)
+        simpleai(self, obj)
+        self.map.add_node(obj, x, y, 0, 0)
+        return obj
+
+    def create_enemies(self, count):
         self.enemies = []
 
         while count > 0:
@@ -190,18 +96,7 @@ class StageScene(Node):
             if self.is_filled(x, y):
                 continue
 
-            enemy = Enemy(
-                    parent=self.map,
-                    style={
-                        'width': cell_size, 
-                        'height': cell_size, 
-                        'z-index': layers['object'] },
-                    opt={
-                        '$speed': 2.0,
-                        '@move': self.move_object,
-                        '?cell size': lambda: self.map.get_cell_size() }
-                    )
-            self.map.add_node(enemy, x, y, 0, 0)
+            enemy = self.create_enemy(x, y)
             self.enemies.append(enemy)
             count -= 1
 
@@ -249,9 +144,9 @@ class StageScene(Node):
 
         self.__create_map()
         self.__create_floor()
-        self.__create_player()
+        self.player = self.create_player(0, 0)
         self.__create_hard_blocks()        
-        self.__create_enemies(10)
+        self.create_enemies(10)
         self.__create_soft_blocks(25)        
 
         self.__mark_destroy = set()

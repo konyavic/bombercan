@@ -17,10 +17,11 @@ def printfps(second=1.0, counter=5):
         @wraps(f)
         def __printfps(*args, **kw):
             ret = f(*args, **kw)
-
             cur_time = time()
             elapsed_time = cur_time - f._fps_last_time
-            if elapsed_time > second:
+            if elapsed_time < second:
+                f._fps_counters[f._fps_cur_counter] += 1    
+            else:
                 f._fps_last_time = cur_time
                 f._fps_cur_counter = (f._fps_cur_counter + 1) % counter
                 total_count = 0
@@ -28,8 +29,6 @@ def printfps(second=1.0, counter=5):
                     total_count += count
                 print 'fps =', total_count / float(second * counter)
                 f._fps_counters[f._fps_cur_counter] = 1 # reset
-            else:
-                f._fps_counters[f._fps_cur_counter] += 1    
 
             return ret 
         

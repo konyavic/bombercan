@@ -178,7 +178,7 @@ class MenuScene(Node):
                     'align': 'center'
                     },
                 opt={
-                    '$text': u'ボンバーマンのような何か',
+                    '$text': u'ボンバー缶',
                     '$font': 'Meiryo, MS Gothic bold 30',
                     '$color': (1, 1, 0.3, 1),
                     }

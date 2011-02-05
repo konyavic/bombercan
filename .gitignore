@@ -1,5 +1,4 @@
-*.exe
-*.o
+dist/*
+build/*
 *.swp
-*.dll
-*.log
+*.pyc

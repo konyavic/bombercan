@@ -66,10 +66,12 @@ class StageScene(Node):
                     'height': cell_size * 2, 
                     'z-index': layers['object'] }
                 )
-        character(self, obj, 
+        make_character(self, obj, 
                 on_move=lambda dir: obj.move_animation(dir),
                 on_stop=lambda dir: obj.remove_animation(dir))
-        bombmaker(self, obj)
+        make_breakable(self, obj, 
+                on_die=lambda: self.game_reset())
+        make_bombmaker(self, obj)
         self.map.add_node(obj, x, y, 0, -cell_size)
         return obj
 
@@ -82,13 +84,19 @@ class StageScene(Node):
                     'height': cell_size, 
                     'z-index': layers['object'] }
                 )
-        character(self, obj, speed=1.0)
-        simpleai(self, obj)
+        make_character(self, obj, speed=3.0)
+        make_breakable(self, obj,
+                on_die=lambda: self.dec_enemy_count())
+        fatal(blocking(obj))
+        make_simpleai(self, obj)
         self.map.add_node(obj, x, y, 0, 0)
         return obj
 
+    def dec_enemy_count(self):
+        self.enemy_count -= 1
+
     def create_enemies(self, count):
-        self.enemies = []
+        self.enemy_count = count
 
         while count > 0:
             x = int(random() * self.map_size[0])
@@ -97,7 +105,6 @@ class StageScene(Node):
                 continue
 
             enemy = self.create_enemy(x, y)
-            self.enemies.append(enemy)
             count -= 1
 
     def __create_hard_blocks(self):
@@ -105,13 +112,13 @@ class StageScene(Node):
 
         for x in xrange(1, self.map_size[0], 2):
             for y in xrange(1, self.map_size[1], 2):
-                block = blocking(HardBlock(
+                block = fireblocking(blocking(HardBlock(
                     parent=self.map,
                     style={
                         'width': cell_size, 
                         'height': cell_size * 2, 
                         'z-index': layers['object'] }
-                    ))
+                    )))
                 self.map.add_node(block, x, y, 0, -cell_size)
 
     def __create_soft_blocks(self, count):
@@ -123,13 +130,13 @@ class StageScene(Node):
             if self.is_filled(x, y):
                 continue
 
-            block = blocking(SoftBlock(
+            block = make_breakable(self, blocking(SoftBlock(
                     parent=self.map,
                     style={
                         'width': cell_size, 
                         'height': cell_size * 2, 
                         'z-index': layers['object'] }
-                    ))
+                    )))
             self.map.add_node(block, x, y, 0, -cell_size)
             count -= 1
 
@@ -216,19 +223,18 @@ class StageScene(Node):
 
         # actual destroy of marked nodes
         for n in self.__mark_destroy:
-            n.destroy()
-            self.map.remove_node(n)
+            n.die()
 
         self.__mark_destroy = set()
 
         # lose condition
         cell = self.map.get_cell(self.player)
-        for e in self.enemies:
-            if cell == self.map.get_cell(e):
+        for n in self.map.get_cell_nodes(*cell):
+            if is_fatal(n):
                 self.game_reset()
 
         # win condition
-        if len(self.enemies) == 0:
+        if self.enemy_count == 0:
                 self.game_reset()
 
     def is_filled(self, x, y):
@@ -242,7 +248,8 @@ class StageScene(Node):
         if (0 <= x and x < self.map_size[0]
                 and 0 <= y and y < self.map_size[1]):
             for n in self.map.get_cell_nodes(x, y):
-                if is_blocking(n):
+                # XXX
+                if is_blocking(n) and not is_fatal(n):
                     return True
 
             return False
@@ -275,40 +282,35 @@ class StageScene(Node):
 
     def place_bomb(self, x, y, delay, power):
         cell_size = self.map.get_cell_size()
-        bomb = blocking(Bomb(
+        bomb = Bomb(
                 parent=self.map,
                 style={
                     'width': cell_size,
                     'height': cell_size,
-                    'z-index': layers['object'] },
-                opt={
-                    '$count': delay,
-                    '$power': power,
-                    '@explode': lambda node: self.explode(node, x, y, power) } 
-                ))
+                    'z-index': layers['object'] }
+                )
+        make_breakable(self, bomb, 
+                on_die=lambda: self.explode(bomb, x, y, power))
+        make_bomb(bomb, delay, power,
+                on_explode=lambda: self.explode(bomb, x, y, power))
+        blocking(bomb)
+        bomb.counting()
         self.map.add_node(bomb, x, y)
-        bomb.start_counting()
 
     def explode(self, node, x, y, power):
-        self.__mark_destroy.add(node)
         cell_size = self.map.get_cell_size()
 
         def search_and_break(nodes):
             for n in nodes:
-                if isinstance(n, Block) and n.is_breakable:
+                if is_fireblocking(n):
+                    return (True, -1)
+                elif is_bomb(n):
+                    n.die()
+                elif is_character(n):
+                    n.die()
+                elif is_breakable(n):
                     self.__mark_destroy.add(n)
                     return (True, 0)
-                elif isinstance(n, Block) and not n.is_breakable:
-                    return (True, -1)
-                elif isinstance(n, Bomb) and not (n in self.__mark_destroy):
-                    n.explode()
-                elif isinstance(n, Enemy):
-                    self.__mark_destroy.add(n)
-                    if n in self.enemies:
-                        self.enemies.remove(n)
-                elif isinstance(n, Player):
-                    # XXX: game over
-                    self.game_reset()
 
             return (False, 0)
 

@@ -12,24 +12,9 @@ import cairo
 from pnode import Node
 
 class Bomb(Node):
-    def __init__(self, parent, style, opt):
+    def __init__(self, parent, style):
         Node.__init__(self, parent, style)
-
-        # input attributes
-        self.count = float(opt['$count'])
-        self.power = int(opt['$power'])
-        if opt.has_key('$is endless'):
-            self.is_endless = opt['$is endless']
-        else:
-            self.is_endless = False
-
-        # dependent functions
-        self.do_explode = opt['@explode']
-
-        # private attributes
         self.__scale = 1.0
-        self.__is_counting = False
-
         self.on_update()
 
     def __draw(self, cr):
@@ -63,28 +48,14 @@ class Bomb(Node):
         cr = cairo.Context(self.surface)
         self.__draw(cr)
 
-    def on_tick(self, interval):
-        if self.__is_counting and not self.is_endless:
-            self.count -= interval
-            if self.count < 0:
-                self.__is_counting = False
-                self.explode()
-
-    def start_counting(self):
+    def counting(self):
         def counting_animation(self, phase):
             self.__scale = 1.25 - 0.25 * math.cos(phase * math.pi * 2)
             self.create_surface_by_scale(self.__scale, rel_origin=(0.5, 0.8))
             cr = cairo.Context(self.surface)
             self.__draw(cr)
 
-        self.__is_counting = True
         self.add_animation('count', counting_animation, loop=True, delay=0, period=1.5)
-
-    def explode(self):
-        self.do_explode(self)
-
-    def destroy(self):
-        pass
 
 class HardBlock(Node):
     def on_update(self):
@@ -143,9 +114,6 @@ class SoftBlock(Node):
         cr.set_source_rgb(0, 0, 0)
         cr.set_line_width(1)
         cr.stroke()
-
-    def destroy(self):
-        pass
 
 class Can(Node):
     def __draw_feet(self, cr, x, y, inverse=1):

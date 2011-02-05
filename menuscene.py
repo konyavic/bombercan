@@ -95,18 +95,10 @@ class Selections(Node):
                     'top': self.labels[0].y,
                     'left': self.labels[0].x - self.labels[0].height / 2,
                     'width': self.labels[0].height,
-                    'height': self.labels[0].height,
-                    },
-                opt={
-                    '$count': 0,
-                    '$power': 0,
-                    '$is endless': True,
-                    '@explode': None,
-                    '@destroy': None
-                    }
+                    'height': self.labels[0].height }
                 )
+        self.curser.counting()
         self.add_node(self.curser)
-        self.curser.start_counting()
         self.select(0)
 
         self.on_update()

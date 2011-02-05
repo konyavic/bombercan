@@ -4,51 +4,77 @@
 from new import instancemethod
 from random import random
 
-BLOCKING    = 1 << 0
-FATAL       = 1 << 1
-BREAKABLE   = 1 << 2
-CHARACTER   = 1 << 3
+MOVE_BLOCKING   = 1 << 0
+FIRE_BLOCKING   = 1 << 1
+FATAL           = 1 << 2
+BREAKABLE       = 1 << 3
+CHARACTER       = 1 << 4
+ENEMY           = 1 << 5
+PLAYER          = 1 << 6
+BOMB            = 1 << 7
 
-def stageobj(flag, obj):
+def stageobj(flag, node):
     try:
-        obj.stageobj_flags |= flag
+        node.stageobj_flags |= flag
     except AttributeError:
-        obj.stageobj_flags = flag
+        node.stageobj_flags = flag
 
-    return obj
+    return node
 
-def stageobj_has_flag(flag, obj):
+def stageobj_has_flag(flag, node):
     try:
-        return obj.stageobj_flags
+        return node.stageobj_flags & flag
     except AttributeError:
-        obj.stageobj_flags = 0
+        node.stageobj_flags = 0
         return False
 
-def blocking(obj):
-    return stageobj(BLOCKING, obj)
+def blocking(node):
+    return stageobj(MOVE_BLOCKING, node)
 
-def is_blocking(obj):
-    return stageobj_has_flag(BLOCKING, obj)
+def is_blocking(node):
+    return stageobj_has_flag(MOVE_BLOCKING, node)
 
-def fatal(obj):
-    return stageobj(FATAL, obj)
+def fireblocking(node):
+    return stageobj(FIRE_BLOCKING, node)
 
-def is_fatal(obj):
-    return stageobj_has_flag(FATAL, obj)
+def is_fireblocking(node):
+    return stageobj_has_flag(FIRE_BLOCKING, node)
 
-def breakable(obj):
-    return stageobj(BREAKABLE, obj)
+def fatal(node):
+    return stageobj(FATAL, node)
 
-def is_breakable(obj):
-    return stageobj_has_flag(BREAKABLE, obj)
+def is_fatal(node):
+    return stageobj_has_flag(FATAL, node)
 
-def bomb():
-    pass
+def player(node):
+    return stageobj(PLAYER, node)
 
-def is_character(obj):
-    return stageobj_has_flag(CHARACTER, obj)
+def is_player(node):
+    return stageobj_has_flag(PLAYER, node)
 
-def character(stage, node, 
+def enemy(node):
+    return stageobj(ENEMY, node)
+
+def is_enemy(node):
+    return stageobj_has_flag(ENEMY, node)
+
+def is_breakable(node):
+    return stageobj_has_flag(BREAKABLE, node)
+
+def make_breakable(stage, node, on_die=None):
+    stageobj(BREAKABLE, node)
+
+    def die(self):
+        stage.map.remove_node(node)
+        if on_die: on_die()
+
+    node.die = instancemethod(die, node)
+    return node
+
+def is_character(node):
+    return stageobj_has_flag(CHARACTER, node)
+
+def make_character(stage, node, 
         speed=4.0, on_move=None, on_stop=None, on_die=None):
 
     stageobj(CHARACTER, node)
@@ -85,17 +111,12 @@ def character(stage, node,
                 on_stop('right')
                 on_stop('left')
 
-    def die(self):
-        if on_die: on_die()
-
-    # setup methods
     node.move = instancemethod(move, node)
     node.stop = instancemethod(stop, node)
-    node.die = instancemethod(die, node)
     return node
 
-def bombmaker(stage, node,
-        bomb_delay=5, bomb_power=2, bomb_count=1, on_bomb=None):
+def make_bombmaker(stage, node,
+        bomb_delay=5, bomb_power=3, bomb_count=1, on_bomb=None):
 
     node.bomb_delay = bomb_delay
     node.bomb_power = bomb_power
@@ -110,18 +131,41 @@ def bombmaker(stage, node,
     node.bomb = instancemethod(bomb, node)
     return node
 
-def simpleai(stage, node, timeout=3.0):
-    node.timecount=timeout
+def make_simpleai(stage, node, timeout=3.0):
+    node.ai_timecount=timeout * random()
+    node.ai_old_pos = (node.x, node.y)
 
     def on_tick(self, interval):
-        self.timecount += interval
-        if self.timecount < timeout:
+        self.ai_timecount += interval
+        if (self.ai_timecount < timeout
+                and self.ai_old_pos != (self.x, self.y)):
             return
         
-        self.timecount = 0.0
+        self.ai_timecount = 0.0
+        self.ai_old_pos = (node.x, node.y)
         dir = ['up', 'down', 'left', 'right'][int(random() * 4)]
         self.stop()
         self.move(dir)
+
+    node.on_tick = instancemethod(on_tick, node)
+    return node
+
+def make_floor():
+    pass
+
+def is_bomb(node):
+    return stageobj_has_flag(BOMB, node)
+
+def make_bomb(node, delay, power, on_explode):
+    stageobj(BOMB, node)
+
+    node.bomb_delay = delay
+    node.bomb_power = power
+    
+    def on_tick(self, interval):
+        self.bomb_delay -= interval
+        if self.bomb_delay < 0:
+            on_explode()
 
     node.on_tick = instancemethod(on_tick, node)
     return node

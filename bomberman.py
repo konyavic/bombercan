@@ -52,5 +52,8 @@ class Bomberman(Game):
         pass
 
 if __name__ == '__main__':
-    game = Bomberman()
-    game.run()
+    try: 
+        game = Bomberman()
+        game.run()
+    except KeyboardInterrupt:
+        pass

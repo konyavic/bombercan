@@ -9,8 +9,7 @@ from stagescene import StageScene
 
 from printfps import printfps
 
-
-class Bomberman(Game):
+class Bombercan(Game):
     def __init__(self):
         Game.__init__(self, 'BomberCan', 500, 500, 80)
 
@@ -53,7 +52,7 @@ class Bomberman(Game):
 
 if __name__ == '__main__':
     try: 
-        game = Bomberman()
+        game = Bombercan()
         game.run()
     except KeyboardInterrupt:
         pass

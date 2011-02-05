@@ -22,7 +22,7 @@ layers = {
         }
 
 class StageScene(Node):
-    def __create_map(self):
+    def create_map(self):
         self.map = MapContainer(
                 parent=self,
                 style={
@@ -57,7 +57,7 @@ class StageScene(Node):
                         )
                 self.map.add_node(floor, x, y)
 
-    def create_player(self, x, y):
+    def create_player_at(self, x, y):
         cell_size = self.map.get_cell_size()
         obj = Can(
                 parent=self.map,
@@ -76,7 +76,7 @@ class StageScene(Node):
         self.map.add_node(obj, x, y, 0, -cell_size)
         return obj
 
-    def create_enemy(self, x, y):
+    def create_enemy_at(self, x, y):
         cell_size = self.map.get_cell_size()
         obj = Bishi(
                 parent=self.map,
@@ -106,40 +106,47 @@ class StageScene(Node):
             if self.is_filled(x, y):
                 continue
 
-            enemy = self.create_enemy(x, y)
+            self.create_enemy_at(x, y)
             count -= 1
 
-    def __create_hard_blocks(self):
+    def create_hard_block_at(self, x, y):
         cell_size = self.map.get_cell_size()
+        obj = HardBlock(
+                parent=self.map,
+                style={
+                    'width': cell_size, 
+                    'height': cell_size * 2, 
+                    'z-index': layers['object'] }
+                )
+        fireblocking(blocking(obj))
+        self.map.add_node(obj, x, y, 0, -cell_size)
 
+    def create_hard_blocks(self):
         for x in xrange(1, self.map_size[0], 2):
             for y in xrange(1, self.map_size[1], 2):
-                block = fireblocking(blocking(HardBlock(
-                    parent=self.map,
-                    style={
-                        'width': cell_size, 
-                        'height': cell_size * 2, 
-                        'z-index': layers['object'] }
-                    )))
-                self.map.add_node(block, x, y, 0, -cell_size)
+                self.create_hard_block_at(x, y)
 
-    def __create_soft_blocks(self, count):
+    def create_soft_block_at(self, x, y):
         cell_size = self.map.get_cell_size()
+        obj = SoftBlock(
+                parent=self.map,
+                style={
+                    'width': cell_size, 
+                    'height': cell_size * 2, 
+                    'z-index': layers['object'] }
+                )
+        blocking(obj)
+        make_breakable(self, obj)
+        self.map.add_node(obj, x, y, 0, -cell_size)
 
+    def create_soft_blocks(self, count):
         while count > 0:
             x = int(random() * self.map_size[0])
             y = int(random() * self.map_size[1])
             if self.is_filled(x, y):
                 continue
 
-            block = make_breakable(self, blocking(SoftBlock(
-                    parent=self.map,
-                    style={
-                        'width': cell_size, 
-                        'height': cell_size * 2, 
-                        'z-index': layers['object'] }
-                    )))
-            self.map.add_node(block, x, y, 0, -cell_size)
+            self.create_soft_block_at(x, y)
             count -= 1
 
     def __init__(self, parent, style, opt):
@@ -151,12 +158,12 @@ class StageScene(Node):
         self.key_down = opt['@key down']
         self.game_reset = opt['@game reset']
 
-        self.__create_map()
+        self.create_map()
         self.__create_floor()
-        self.player = self.create_player(0, 0)
-        self.__create_hard_blocks()        
+        self.player = self.create_player_at(0, 0)
+        self.create_hard_blocks()        
         self.create_enemies(10)
-        self.__create_soft_blocks(25)        
+        self.create_soft_blocks(25)        
 
         self.__mark_destroy = set()
 
@@ -250,8 +257,9 @@ class StageScene(Node):
         if (0 <= x and x < self.map_size[0]
                 and 0 <= y and y < self.map_size[1]):
             for n in self.map.get_cell_nodes(x, y):
-                # XXX
-                if is_blocking(n) and not is_fatal(n):
+                if is_player(node) and is_fatal(n):
+                    return False
+                elif is_blocking(n):
                     return True
 
             return False
@@ -260,6 +268,7 @@ class StageScene(Node):
             return False
 
     def move_object(self, node, dx, dy):
+        # XXX: refactor
         map = self.map
         cell = map.get_cell(node)
         pos = map.get_node_pos(node)
@@ -300,6 +309,7 @@ class StageScene(Node):
         self.map.add_node(bomb, x, y)
 
     def explode(self, node, x, y, power):
+        # XXX: refactor
         cell_size = self.map.get_cell_size()
 
         def search_and_break(nodes):

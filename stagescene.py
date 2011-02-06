@@ -68,11 +68,11 @@ class StageScene(Node):
                 )
         # player(blocking(obj))
         make_character(self, obj, 
-                on_move=lambda dir: obj.move_animation(dir),
+                on_move=lambda dir: obj.move_animation(period=0.2, name=dir, loop=True),
                 on_stop=lambda dir: obj.remove_animation(dir))
         make_breakable(self, obj, 
                 on_die=lambda: self.game_reset())
-        make_bombmaker(self, obj)
+        make_bomber(self, obj)
         self.map.add_node(obj, x, y, 0, -cell_size)
         return obj
 
@@ -305,7 +305,7 @@ class StageScene(Node):
         make_bomb(bomb, delay, power,
                 on_explode=lambda: self.explode(bomb, x, y, power))
         blocking(bomb)
-        bomb.counting()
+        bomb.counting_animation(period=1.5, loop=True)
         self.map.add_node(bomb, x, y)
 
     def explode(self, node, x, y, power):

@@ -115,7 +115,7 @@ def make_character(stage, node,
     node.stop = instancemethod(stop, node)
     return node
 
-def make_bombmaker(stage, node,
+def make_bomber(stage, node,
         bomb_delay=5, bomb_power=3, bomb_count=1, on_bomb=None):
 
     node.bomb_delay = bomb_delay

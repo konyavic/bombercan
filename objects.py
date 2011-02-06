@@ -9,7 +9,7 @@ import gtk.gdk as gdk
 import gobject
 import cairo
 
-from pnode import Node
+from pnode import *
 
 class Bomb(Node):
     def __init__(self, parent, style):
@@ -48,14 +48,12 @@ class Bomb(Node):
         cr = cairo.Context(self.surface)
         self.__draw(cr)
 
-    def counting(self):
-        def counting_animation(self, phase):
-            self.__scale = 1.25 - 0.25 * math.cos(phase * math.pi * 2)
-            self.create_surface_by_scale(self.__scale, rel_origin=(0.5, 0.8))
-            cr = cairo.Context(self.surface)
-            self.__draw(cr)
-
-        self.add_animation('count', counting_animation, loop=True, delay=0, period=1.5)
+    @animation
+    def counting_animation(self, phase):
+        self.__scale = 1.25 - 0.25 * math.cos(phase * math.pi * 2)
+        self.create_surface_by_scale(self.__scale, rel_origin=(0.5, 0.8))
+        cr = cairo.Context(self.surface)
+        self.__draw(cr)
 
 class HardBlock(Node):
     def on_update(self):
@@ -217,27 +215,25 @@ class Can(Node):
         self.__draw_eyes(cr)
         cr.restore()
 
-    def move_animation(self, dir):
-        def _move_animation(self, phase):
-            width, height = self.width, self.height
-            delta = height * 0.05 * math.cos(phase * math.pi * 2)
+    @animation
+    def move_animation(self, phase):
+        width, height = self.width, self.height
+        delta = height * 0.05 * math.cos(phase * math.pi * 2)
 
-            cr = cairo.Context(self.surface)
-            self.clear_context(cr)
-            cr.save()
-            cr.set_line_join(cairo.LINE_JOIN_BEVEL)
-            # draw feets
-            self.__draw_feet(cr, width * 0.3, height * 0.8 + delta)
-            self.__draw_feet(cr, width * (1 - 0.3), height * 0.8 - delta, -1)
-            # draw body
-            self.__draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0, 0, 0.7))
-            # draw head
-            self.__draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.7, 0.7, 0.7))
-            # draw eyes
-            self.__draw_eyes(cr)
-            cr.restore()
-        
-        self.add_animation(dir, _move_animation, loop=True, delay=0, period=0.2)
+        cr = cairo.Context(self.surface)
+        self.clear_context(cr)
+        cr.save()
+        cr.set_line_join(cairo.LINE_JOIN_BEVEL)
+        # draw feets
+        self.__draw_feet(cr, width * 0.3, height * 0.8 + delta)
+        self.__draw_feet(cr, width * (1 - 0.3), height * 0.8 - delta, -1)
+        # draw body
+        self.__draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0, 0, 0.7))
+        # draw head
+        self.__draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.7, 0.7, 0.7))
+        # draw eyes
+        self.__draw_eyes(cr)
+        cr.restore()
 
 class Bishi(Node):
     def on_update(self):

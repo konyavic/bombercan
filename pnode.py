@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import time
+from time import time
+from functools import wraps
 
 import gtk
 import gtk.gdk as gdk
@@ -87,6 +88,16 @@ def evaluate_style(node, style):
                 node.y = node.parent.height - node.height
         elif k == 'z-index':
             node.z_index = int(value)
+
+def animation(f):
+    """
+    Decorator for animation
+    """
+    @wraps(f)
+    def _animation(self, period, name=f.__name__, delay=0.0, loop=False, cleanup=None):
+        self.add_animation(name, f, delay, period, loop, cleanup)
+
+    return _animation
 
 class Node:
     def __init__(self, parent, style):
@@ -354,7 +365,7 @@ class Game:
                 gtk.main_quit()
 
             # calculate elapsed time
-            last_time = time.time()
+            last_time = time()
             self.interval = last_time - self.cur_time
             self.cur_time = last_time
             # handle input and timer events
@@ -388,7 +399,7 @@ class Game:
         self.top_node.do_resize_recursive()
 
     def run(self):
-        self.cur_time = time.time()
+        self.cur_time = time()
         self.interval = 0
 
         window = gtk.Window()

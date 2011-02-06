@@ -47,7 +47,7 @@ class ExplosionEffect(Node):
 
 
 class Particle():
-    __slots__ = ('size', 'position', 'velocity', 'color', 'v_color', 'lifetime')
+    __slots__ = ('size', 'v_size', 'position', 'velocity', 'color', 'v_color', 'lifetime')
 
 def restrict(e):
     if e <= 0.0: 
@@ -60,7 +60,7 @@ def restrict(e):
 class ParticleEffect(Node):
     def __init__(self, parent, style, 
             size, color, v_color, center, velocity, velocity_deviation, lifetime,
-            size_deviation=0, center_deviation=(0, 0), 
+            v_size=0, v_size_deviation=0, size_deviation=0, center_deviation=(0, 0), 
             color_deviation=(0, 0, 0, 0), v_color_deviation=(0, 0, 0, 0),
             lifetime_deviation=0, max_amount=0, initial_amount=0, spawn_interval=0.0):
 
@@ -73,6 +73,8 @@ class ParticleEffect(Node):
         # position (change upon resize)
         self.size = size
         self.size_deviation = size_deviation
+        self.v_size = v_size
+        self.v_size_deviation = v_size_deviation
         self.center = center
         self.center_deviation = center_deviation
         self.velocity = velocity
@@ -97,6 +99,7 @@ class ParticleEffect(Node):
 
         p = Particle()
         p.size = deviated((self.size, self.size_deviation))
+        p.v_size = deviated((self.v_size, self.v_size_deviation))
         p.lifetime = deviated((self.lifetime, self.lifetime_deviation))
         p.position = map(deviated, zip(self.center, self.center_deviation))
         p.velocity = map(deviated, zip(self.velocity, self.velocity_deviation))
@@ -115,8 +118,9 @@ class ParticleEffect(Node):
             p.position = map(update_value, zip(p.position, p.velocity, interval2))
             p.color = map(update_value, zip(p.color, p.v_color, interval4))
             p.color = map(restrict, p.color)
+            p.size += p.v_size * interval
             p.lifetime -= interval
-            if p.lifetime <= 0.0 or p.color[3] <= 0.0:
+            if p.lifetime <= 0.0 or p.color[3] <= 0.0 or p.size <= 0:
                 self.particles.remove(p)
 
         # spawn new particle
@@ -135,7 +139,7 @@ class ParticleEffect(Node):
         for p in self.particles:
             x = p.position[0] * rect[0]
             y = p.position[1] * rect[1]
-            size = p.size * (rect[0] + rect[1]) / 2
+            size = p.size * self.width / self.orig_width
             cr.set_source_rgba(*p.color)
             cr.arc(x, y, size, 0, 2 * pi)
             cr.fill()

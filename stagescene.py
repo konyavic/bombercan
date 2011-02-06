@@ -390,6 +390,6 @@ class StageScene(Node):
                 v_size=(-0.2 * cell_size), v_size_deviation=(0.05 * cell_size),
                 color=(1.0, 0.8, 0.0, 0.2), color_deviation=(0.5, 0.5, 0.0, -0.05), v_color=(0, -0.2, 0, 0),
                 center=(0.5, 0.8), center_deviation=(0.2, 0.1),
-                velocity=(0, -1.0), velocity_deviation=(0.0, 0.2), lifetime=5.0)
+                velocity=(0, -1.0), velocity_deviation=(0.0, 0.2), lifetime=1.0)
         self.map.add_node(particle, x, y, 0, -up * cell_size)
-        particle.play(period=5, loop=False, cleanup=lambda node: self.map.remove_node(node))
+        particle.play(period=3, loop=False, cleanup=lambda node: self.map.remove_node(node))

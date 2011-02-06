@@ -86,6 +86,7 @@ class ParticleEffect(Node):
         self.max_amount = max_amount
         self.spawn_interval = spawn_interval
         self.time_elapsed = 0.0
+        self.fadeout = False
         self.particles = []
         for i in xrange(0, initial_amount):
             self.spawn()
@@ -120,7 +121,7 @@ class ParticleEffect(Node):
 
         # spawn new particle
         self.time_elapsed += interval
-        if (self.time_elapsed > self.spawn_interval 
+        if (self.time_elapsed > self.spawn_interval and not self.fadeout
                 and (self.max_amount == 0 or len(self.particles) <= self.max_amount)):
 
             self.time_elapsed = 0.0
@@ -138,3 +139,7 @@ class ParticleEffect(Node):
             cr.set_source_rgba(*p.color)
             cr.arc(x, y, size, 0, 2 * pi)
             cr.fill()
+
+    def stop(self, timeout):
+        self.fadeout = True
+        self.play(name='fadeout', period=timeout, loop=False)

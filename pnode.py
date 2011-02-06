@@ -274,7 +274,9 @@ class Node:
             elif current.animation_list:
                 # perform animation
                 current.animated = True
-                for name, anime in current.animation_list.iteritems():
+                # XXX
+                tmp_list = current.animation_list.copy()
+                for name, anime in tmp_list.iteritems():
                     current.__update_animation(name, anime, interval)
                     
                 # actual removal of done animation

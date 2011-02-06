@@ -49,7 +49,7 @@ class Bomb(Node):
         self.__draw(cr)
 
     @animation
-    def counting_animation(self, phase):
+    def play_counting(self, phase):
         self.__scale = 1.25 - 0.25 * math.cos(phase * math.pi * 2)
         self.create_surface_by_scale(self.__scale, rel_origin=(0.5, 0.8))
         cr = cairo.Context(self.surface)
@@ -216,7 +216,7 @@ class Can(Node):
         cr.restore()
 
     @animation
-    def move_animation(self, phase):
+    def play_moving(self, phase):
         width, height = self.width, self.height
         delta = height * 0.05 * math.cos(phase * math.pi * 2)
 
@@ -250,12 +250,9 @@ class Bishi(Node):
         cr.stroke()
 
 class Floor(Node):
-    def __init__(self, parent, style, opt):
+    def __init__(self, parent, style):
         Node.__init__(self, parent, style)
-        
-        self.check_should_light = opt['?should light']
-
-        self.__lighted = False
+        self.color = (0.5, 0.5, 1, 0.7)
         self.on_update()
 
     def __draw_simple_pattern(self, color):
@@ -274,35 +271,22 @@ class Floor(Node):
         self.color = (0.5, 0.5, 1, 0.7)
         self.__draw_simple_pattern(self.color)
 
-    def on_tick(self, interval):
-        if self.check_should_light(self) and not self.__lighted:
-            self.light(True)
-        elif not self.check_should_light(self) and self.__lighted:
-            self.light(False)
+    @animation
+    def play_blink(self, phase):
+        c = math.cos(phase * math.pi * 2)
+        self.color = (
+                0.75 - 0.25 * c, 
+                0.25 + 0.25 * c, 
+                0.5 + 0.5 * c,
+                0.7)
+        self.__draw_simple_pattern(self.color)
 
-    def light(self, b):
-        self.__lighted = b
-
-        def blink_animation(self, phase):
-            c = math.cos(phase*math.pi*2)
-            self.color = (
-                    0.75-0.25*c, 
-                    0.25+0.25*c, 
-                    0.5+0.5*c,
-                    0.7)
-            self.__draw_simple_pattern(self.color)
-
-        def fade_out_animation(self, phase):
-            tmp_color = (
-                    self.color[0]+(0.5-self.color[0])*phase,
-                    self.color[1]+(0.5-self.color[1])*phase,
-                    self.color[2]+(1-self.color[2])*phase,
-                    0.7
-                    )
-            self.__draw_simple_pattern(tmp_color)
-
-        if b:
-            self.add_animation('blink', blink_animation, delay=0, period=1, loop=True)
-        else:
-            self.remove_animation('blink')
-            self.add_animation('fade out', fade_out_animation, delay=0, period=1, loop=False)
+    @animation
+    def play_fadeout(self, phase):
+        tmp_color = (
+                self.color[0] + (0.5 - self.color[0]) * phase,
+                self.color[1] + (0.5 - self.color[1]) * phase,
+                self.color[2] + (1 - self.color[2]) * phase,
+                0.7
+                )
+        self.__draw_simple_pattern(tmp_color)

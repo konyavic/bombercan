@@ -38,24 +38,33 @@ class StageScene(Node):
                 )
         self.add_node(self.map)
 
-    def __create_floor(self):
-        cell_size = self.map.get_cell_size()
+    def create_floor(self):
+        def play_blink(obj):
+            def _play_blink():
+                obj.remove_animation('fadeout')
+                obj.play_blink(name='blink', period=1, loop=True)
+            return _play_blink
 
+        def play_fadeout(obj):
+            def _play_fadeout():
+                obj.remove_animation('blink')
+                obj.play_fadeout(name='fadeout', period=1)
+            return _play_fadeout
+
+        cell_size = self.map.get_cell_size()
         for x in xrange(0, self.map_size[0]):
             for y in xrange(0, self.map_size[1]):
-                def should_light(x, y):
-                    return lambda node: (x, y) == self.map.get_cell(self.player)
-
-                floor = Floor(
+                obj = Floor(
                         parent=self.map,
                         style={
                             'width': cell_size,
                             'height': cell_size,
-                            'z-index': layers['floor'] },
-                        opt={
-                            '?should light': should_light(x, y) }
+                            'z-index': layers['floor'] }
                         )
-                self.map.add_node(floor, x, y)
+                make_trackingfloor(self, obj, x, y, 
+                        on_enter=play_blink(obj),
+                        on_leave=play_fadeout(obj))
+                self.map.add_node(obj, x, y)
 
     def create_player_at(self, x, y):
         cell_size = self.map.get_cell_size()
@@ -68,7 +77,7 @@ class StageScene(Node):
                 )
         # player(blocking(obj))
         make_character(self, obj, 
-                on_move=lambda dir: obj.move_animation(period=0.2, name=dir, loop=True),
+                on_move=lambda dir: obj.play_moving(period=0.2, name=dir, loop=True),
                 on_stop=lambda dir: obj.remove_animation(dir))
         make_breakable(self, obj, 
                 on_die=lambda: self.game_reset())
@@ -77,6 +86,9 @@ class StageScene(Node):
         return obj
 
     def create_enemy_at(self, x, y):
+        def _dec_enemy_count():
+            self.enemy_count -= 1
+
         cell_size = self.map.get_cell_size()
         obj = Bishi(
                 parent=self.map,
@@ -89,13 +101,11 @@ class StageScene(Node):
         fatal(blocking(obj))
         make_character(self, obj, speed=3.0)
         make_breakable(self, obj,
-                on_die=lambda: self.dec_enemy_count())
+                on_die=_dec_enemy_count)
         make_simpleai(self, obj)
         self.map.add_node(obj, x, y, 0, 0)
         return obj
 
-    def dec_enemy_count(self):
-        self.enemy_count -= 1
 
     def create_enemies(self, count):
         self.enemy_count = count
@@ -159,7 +169,7 @@ class StageScene(Node):
         self.game_reset = opt['@game reset']
 
         self.create_map()
-        self.__create_floor()
+        self.create_floor()
         self.player = self.create_player_at(0, 0)
         self.create_hard_blocks()        
         self.create_enemies(10)
@@ -305,7 +315,7 @@ class StageScene(Node):
         make_bomb(bomb, delay, power,
                 on_explode=lambda: self.explode(bomb, x, y, power))
         blocking(bomb)
-        bomb.counting_animation(period=1.5, loop=True)
+        bomb.play_counting(period=1.5, loop=True)
         self.map.add_node(bomb, x, y)
 
     def explode(self, node, x, y, power):

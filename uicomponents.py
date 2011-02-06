@@ -247,7 +247,7 @@ class Selections(Node):
                     'width': self.labels[0].height,
                     'height': self.labels[0].height }
                 )
-        self.curser.counting_animation(1.5, loop=True)
+        self.curser.play_counting(1.5, loop=True)
         self.add_node(self.curser)
         self.select(0)
 

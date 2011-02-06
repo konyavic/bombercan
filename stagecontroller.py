@@ -150,8 +150,22 @@ def make_simpleai(stage, node, timeout=3.0):
     node.on_tick = instancemethod(on_tick, node)
     return node
 
-def make_floor():
-    pass
+def make_trackingfloor(stage, node, x, y, on_enter, on_leave):
+    node.entered = False
+
+    def on_tick(self, interval):
+        map = stage.map
+        player = stage.player
+        is_same_pos = ((x, y) == map.get_cell(player))
+        if is_same_pos and not self.entered:
+            self.entered = True
+            on_enter()
+        elif not is_same_pos and self.entered:
+            self.entered = False
+            on_leave()
+
+    node.on_tick = instancemethod(on_tick, node)
+    return node
 
 def is_bomb(node):
     return stageobj_has_flag(BOMB, node)

@@ -1,12 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import time
-
 from pnode import Game
 from menuscene import MenuScene
 from stagescene import StageScene
-
 from printfps import printfps
 
 class Bombercan(Game):
@@ -50,9 +47,12 @@ class Bombercan(Game):
     def on_tick(self, interval):
         pass
 
-if __name__ == '__main__':
+def main():
     try: 
         game = Bombercan()
         game.run()
     except KeyboardInterrupt:
         pass
+
+if __name__ == '__main__':
+    main()

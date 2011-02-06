@@ -1,8 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import math
-from random import random
+from math import pi
+from math import sin
+from math import cos
 
 import gtk
 import gtk.gdk as gdk
@@ -25,7 +26,7 @@ class Bomb(Node):
                 s_width * 0.6, 
                 s_height * 0.33, 
                 s_width * 0.2, 
-                0, math.pi * 2)
+                0, pi * 2)
         cr.set_source_rgb(0.2, 0.2, 0.2)
         cr.fill_preserve()
         cr.set_line_width(3)
@@ -36,7 +37,7 @@ class Bomb(Node):
                 s_width * 0.45, 
                 s_height * 0.55, 
                 s_width * 0.35, 
-                0, math.pi * 2)
+                0, pi * 2)
         cr.set_source_rgb(0.2, 0.2, 0.2)
         cr.fill_preserve()
         cr.set_line_width(3)
@@ -50,7 +51,7 @@ class Bomb(Node):
 
     @animation
     def play_counting(self, phase):
-        self.__scale = 1.25 - 0.25 * math.cos(phase * math.pi * 2)
+        self.__scale = 1.25 - 0.25 * cos(phase * pi * 2)
         self.create_surface_by_scale(self.__scale, rel_origin=(0.5, 0.8))
         cr = cairo.Context(self.surface)
         self.__draw(cr)
@@ -172,7 +173,7 @@ class Can(Node):
         cr.arc(
                 width * 0.38, height * 0.9,
                 width * 0.1,
-                0, 2 * math.pi)
+                0, 2 * pi)
         cr.restore()
 
         cr.set_source_rgb(1, 1, 0)
@@ -187,7 +188,7 @@ class Can(Node):
         cr.arc(
                 width * (1 - 0.38), height * 0.9,
                 width * 0.1,
-                0, 2 * math.pi)
+                0, 2 * pi)
         cr.restore()
 
         cr.set_source_rgb(1, 1, 0)
@@ -218,7 +219,7 @@ class Can(Node):
     @animation
     def play_moving(self, phase):
         width, height = self.width, self.height
-        delta = height * 0.05 * math.cos(phase * math.pi * 2)
+        delta = height * 0.05 * cos(phase * pi * 2)
 
         cr = cairo.Context(self.surface)
         self.clear_context(cr)
@@ -273,7 +274,7 @@ class Floor(Node):
 
     @animation
     def play_blink(self, phase):
-        c = math.cos(phase * math.pi * 2)
+        c = cos(phase * pi * 2)
         self.color = (
                 0.75 - 0.25 * c, 
                 0.25 + 0.25 * c, 

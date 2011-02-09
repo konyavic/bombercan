@@ -208,16 +208,12 @@ class StageScene(Node):
 
     def on_tick(self, interval):
         if self.key_up('Left'):
-            self.player.stop()
             self.player.move('left')
         elif self.key_up('Up'):
-            self.player.stop()
             self.player.move('up')
         elif self.key_up('Right'):
-            self.player.stop()
             self.player.move('right')
         elif self.key_up('Down'):
-            self.player.stop()
             self.player.move('down')
         elif self.key_down('Left'):
             self.player.stop('left')

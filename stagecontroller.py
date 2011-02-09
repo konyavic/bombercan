@@ -79,27 +79,43 @@ def make_character(stage, node,
 
     stageobj(CHARACTER, node)
     node.speed = speed
+    node.dir_queue = []
+
+    def move_action(self, interval, phase):
+        if len(self.dir_queue) == 0:
+            return
+
+        delta = interval * self.speed * stage.map.get_cell_size()
+        dir = self.dir_queue[0]
+        if dir == 'up':
+            stage.move_object(self, 0, -delta)
+        elif dir == 'down':
+            stage.move_object(self, 0, delta)
+        elif dir == 'left':
+            stage.move_object(self, -delta, 0)
+        elif dir == 'right':
+            stage.move_object(self, delta, 0)
 
     def move(self, dir):
-        def move_action(self, interval, phase):
-            delta = interval * self.speed * stage.map.get_cell_size()
-            if dir == 'up':
-                stage.move_object(self, 0, -delta)
-            elif dir == 'down':
-                stage.move_object(self, 0, delta)
-            elif dir == 'left':
-                stage.move_object(self, -delta, 0)
-            elif dir == 'right':
-                stage.move_object(self, delta, 0)
+        if dir in self.dir_queue:
+            self.dir_queue.remove(dir)
 
-        self.add_action(dir, move_action, loop=True)
+        self.dir_queue.insert(0, dir)
+        self.add_action('move', move_action, loop=True)
         if on_move: on_move(dir)
     
     def stop(self, dir=None):
-        # XXX
-        if dir:
-            self.remove_action(dir)
+        # XXX: key event may be lost
+        if len(self.dir_queue) > 0 and dir == self.dir_queue[0]:
+            self.dir_queue.pop(0)
             if on_stop: on_stop(dir)
+            if len(self.dir_queue) > 0:
+                dir = self.dir_queue[0]
+                if on_move: on_move(dir)
+            else:
+                self.remove_action('move')
+        elif dir in self.dir_queue:
+            self.dir_queue.remove(dir)
         else:
             self.reset_actions()
             if on_stop: 
@@ -136,7 +152,7 @@ def make_simpleai(stage, node, timeout=3.0):
         self.ai_timecount += interval
         # XXX
         #if (self.ai_timecount < timeout
-        #        and self.ai_old_pos != (self.x, self.y)):
+                and self.ai_old_pos != (self.x, self.y)):
         if (self.ai_timecount < timeout):
             return
         

@@ -89,9 +89,18 @@ def evaluate_style(node, style):
         elif k == 'z-index':
             node.z_index = int(value)
 
-def animation(f):
+def action(f):
+    """Decorator for action
     """
-    Decorator for animation
+    @wraps(f)
+    def _action(self, name=f.__name__, 
+            duration=0.0, delay=0.0, update=False, loop=False, cleanup=None):
+        self.add_action(name, f, duration, delay, update, loop, cleanup)
+
+    return _action
+
+def animation(f):
+    """Decorator for animation
     """
     @wraps(f)
     def _animation(self, period, name=f.__name__, delay=0.0, loop=False, cleanup=None):
@@ -106,9 +115,9 @@ class Node:
         self.set_style(style)
         self.reset_surface()
 
-        # the following attributes should never be directly accessed, 
         self.action_list = {}
-        self.action_remove_list = set()
+        self.action_need_update = False
+
         self.animation_list = {}
         self.animation_remove_list = set()
         self.animated = False
@@ -155,6 +164,10 @@ class Node:
         cr.paint()
         cr.restore()
 
+    #
+    # Functions for manipulating sub-nodes
+    #
+
     def add_node(self, node):
         self.children.append(node)
         node.parent = self
@@ -163,23 +176,34 @@ class Node:
         self.children.remove(node)
         node.parent = None
 
-    def add_action(self, name, callback, loop, update):
+    #
+    # Functions for action
+    #
+
+    def add_action(self, name, func, 
+            duration=0.0, delay=0.0, update=False, loop=False, cleanup=None):
+
         self.action_list[name] = {
-            'callback': callback, 
-            'loop': bool(loop), 
+            'func': func,
+            'duration': float(duration),
+            'delay': float(delay),
             'update': bool(update),
-            'done': False
+            'loop': bool(loop),
+            'cleanup': cleanup,
+            'elapsed': 0.0,
+            'started': False
         }
 
     def remove_action(self, name):
         if name in self.action_list:
-            self.action_remove_list.add(name)
-
-    def __remove_actions(self):
-        for name in self.action_remove_list:
             del self.action_list[name]
 
-        self.action_remove_list = set()
+    def reset_actions(self):
+        self.action_list = {}
+
+    #
+    # Functions for animation
+    #
 
     def add_animation(self, name, callback, delay, period, loop, cleanup=None):
         self.animation_list[name] = {
@@ -294,25 +318,7 @@ class Node:
             cr.set_source_surface(current.surface, surface_x, surface_y)
             cr.paint()
 
-    def do_tick_recursive(self, interval):
-        queue = [self]
-        while queue:
-            current = queue.pop(0)
-            current.on_tick(interval)
 
-            # perform actions
-            for name, action in current.action_list.iteritems():
-                if action['done'] and not action['loop']:
-                    current.remove_action[name]
-                else:
-                    action['callback'](current, interval)
-                    action['done'] = True
-
-            # actual removal of done actions
-            current.__remove_actions()
-
-            for node in current.children:
-                queue.append(node)
 
     def do_resize_recursive(self):
         queue = [self]
@@ -321,6 +327,42 @@ class Node:
             current.on_resize()
             for node in current.children:
                 queue.append(node)
+
+def do_tick_recursive(top_node, interval):
+    queue = [top_node]
+    while queue:
+        current = queue.pop(0)
+        current.on_tick(interval)
+
+        # loop over all actions
+        current.action_need_update = False
+        tmp_list = current.action_list.copy()
+        for name, action in tmp_list.iteritems():
+            if not action['started']:
+                action['delay'] -= interval
+                if action['delay'] <= 0.0:
+                    action['started'] = True
+
+            else:
+                # check it's life
+                action['elapsed'] += interval
+                if action['elapsed'] > action['duration']:
+                    if action['loop']:
+                        # XXX: if duration is too small?
+                        action['elapsed'] -= action['duration']
+                    else:
+                        current.action_list.remove_action(name)
+                        continue
+
+                # perform the action
+                phase = 0.0 if action['duration'] <= 0.0 \
+                            else action['elapsed'] / action['duration']
+                action['func'](current, interval, phase)
+                if action['update']:
+                    current.action_need_update = True
+
+        for node in current.children:
+            queue.append(node)
 
 class Game:
     def __init__(self, title, width, height, fps):
@@ -373,7 +415,7 @@ class Game:
             # handle input and timer events
             self.on_tick(self.interval)
             # handle timer events of nodes
-            self.top_node.do_tick_recursive(self.interval)
+            do_tick_recursive(self.top_node, self.interval)
             # take a snapshot of the lastest state of keymap
             self.__keymap = self.__next_keymap.copy()
             # handle frame update

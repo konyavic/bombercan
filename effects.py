@@ -46,7 +46,7 @@ class ExplosionEffect(Node):
         self.add_animation('explosion', animation, delay=0, period=1, loop=False, cleanup=self.do_destroy)
 
 
-class Particle():
+class Particle(object):
     __slots__ = ('size', 'v_size', 'position', 'velocity', 'color', 'v_color', 'lifetime')
 
 def restrict(e):

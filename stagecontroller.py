@@ -81,7 +81,7 @@ def make_character(stage, node,
     node.speed = speed
 
     def move(self, dir):
-        def move_action(self, interval):
+        def move_action(self, interval, phase):
             delta = interval * self.speed * stage.map.get_cell_size()
             if dir == 'up':
                 stage.move_object(self, 0, -delta)
@@ -92,7 +92,7 @@ def make_character(stage, node,
             elif dir == 'right':
                 stage.move_object(self, delta, 0)
 
-        self.add_action(dir, move_action, loop=True, update=False)
+        self.add_action(dir, move_action, loop=True)
         if on_move: on_move(dir)
     
     def stop(self, dir=None):
@@ -101,10 +101,7 @@ def make_character(stage, node,
             self.remove_action(dir)
             if on_stop: on_stop(dir)
         else:
-            self.remove_action('up')
-            self.remove_action('down')
-            self.remove_action('right')
-            self.remove_action('left')
+            self.reset_actions()
             if on_stop: 
                 on_stop('up')
                 on_stop('down')
@@ -137,8 +134,10 @@ def make_simpleai(stage, node, timeout=3.0):
 
     def on_tick(self, interval):
         self.ai_timecount += interval
-        if (self.ai_timecount < timeout
-                and self.ai_old_pos != (self.x, self.y)):
+        # XXX
+        #if (self.ai_timecount < timeout
+        #        and self.ai_old_pos != (self.x, self.y)):
+        if (self.ai_timecount < timeout):
             return
         
         self.ai_timecount = 0.0

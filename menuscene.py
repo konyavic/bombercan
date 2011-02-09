@@ -53,10 +53,17 @@ class MenuScene(Node):
 
         particle = ParticleEffect(self, 
                 {'width': '50%', 'height': '50%', 'align': 'center', 'vertical-align': 'bottom'},
-                size=10, size_deviation=1, v_size=3, v_size_deviation=2, 
-                color=(0.8, 0.4, 0, 0.5), color_deviation=(0.2, 0.2, 0, 0.2), v_color=(-0.5, -0.5, 0, -0.25), 
-                center=(0.5, 0.8), center_deviation=(0.05, 0.1),
-                velocity=(0, -0.3), velocity_deviation=(0.2, 0.1), lifetime=3.0, initial_amount=100)
+                #size=10, size_deviation=1, v_size=3, v_size_deviation=2, 
+                size=10, size_deviation=2, v_size=3, v_size_deviation=0, 
+                #size=10, size_deviation=0, v_size=3, v_size_deviation=0, 
+                #color=(0.8, 0.4, 0, 0.5), color_deviation=(0.2, 0.2, 0, 0.2), v_color=(-0.5, -0.5, 0, -0.25), 
+                color=(0.8, 0.4, 0, 0.5), color_deviation=(0, 0, 0, 0), v_color=(-0.5, -0.5, 0, -0.25), 
+                #center=(0.5, 0.8), center_deviation=(0.02, 0.02),
+                center=(0.5, 0.8), center_deviation=(0, 0),
+                velocity=(0, -0.3), velocity_deviation=(0.2, 0.1), 
+                #velocity=(0, -0.1), velocity_deviation=(0.2, 0.3), 
+                #velocity=(0, -0.5), velocity_deviation=(0.2, 0.2), 
+                lifetime=2.0, initial_amount=100)
         self.add_node(particle)
         particle.play(period=1, loop=True)
 

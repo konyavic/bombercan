@@ -103,8 +103,9 @@ def animation(f):
     """Decorator for animation
     """
     @wraps(f)
-    def _animation(self, period, name=f.__name__, delay=0.0, loop=False, cleanup=None):
-        self.add_animation(name, f, delay, period, loop, cleanup)
+    def _animation(self, duration, 
+            delay=0.0, loop=False, cleanup=None, pend=False):
+        self.set_animation(f, duration, delay, loop, cleanup, pend)
 
     return _animation
 
@@ -112,18 +113,15 @@ class Node:
     def __init__(self, parent, style):
         self.children = []
         self.parent = parent
+
         self.set_style(style)
         self.reset_surface()
 
-        self.action_list = {}
-        self.action_need_update = False
-
-        self.animation_list = {}
-        self.animation_remove_list = set()
-        self.animated = False
+        self.reset_actions()
+        self.reset_animations()
 
     #
-    # Functions could be called without restrictions
+    # Functions for manipulating surface
     #
    
     def set_style(self, style):
@@ -177,7 +175,7 @@ class Node:
         node.parent = None
 
     #
-    # Functions for action
+    # Functions for manipulating actions
     #
 
     def add_action(self, name, func, 
@@ -200,35 +198,35 @@ class Node:
 
     def reset_actions(self):
         self.action_list = {}
+        self.action_need_update = False
 
     #
-    # Functions for animation
+    # Functions for manipulating animations
     #
 
-    def add_animation(self, name, callback, delay, period, loop, cleanup=None):
-        self.animation_list[name] = {
-            'callback': callback,
-            'delay':    float(delay),
-            'period':   float(period),
-            'loop':     bool(loop),
-            'cleanup':  cleanup,
-            'started':  False,
-            'done':     False,
-            'elapsed':  0.0
-        }
+    def set_animation(self, func, 
+            duration=0.0, delay=0.0, loop=False, cleanup=None, pend=False):
 
-    def remove_animation(self, name):
-        if name in self.animation_list:
-            self.animation_remove_list.add(name)
+        anime = {
+                'func': func,
+                'duration': float(duration),
+                'delay': float(delay),
+                'loop': bool(loop),
+                'cleanup': cleanup,
+                'elapsed': 0.0,
+                'started': False
+                } 
 
-    def __remove_animations(self):
-        for name in self.animation_remove_list:
-            del self.animation_list[name]
+        if pend:
+            self.animation_list.append(anime)
+        else:
+            self.animation_list = [ anime ]
 
-        self.animation_remove_list = set()
+    def reset_animations(self):
+        self.animation_list = []
 
     #
-    # Functions should be implemented in sub-classes
+    # Functions could be overwritten in sub-classes
     #
     
     def on_update(self):
@@ -243,37 +241,41 @@ class Node:
         pass
 
     #
-    # Functions should be called from the top node
+    # Core functions
     #
 
-    def __update_animation(self, name, anime, interval):
-        # remove the anime if it is done
-        if anime['done']:
-            self.remove_animation(name)
-            if anime['cleanup']:
-                anime['cleanup'](self)
-
-            return
-
-        # calculate delay and elapsed time
+    def _do_update(self, interval):
+        anime = self.animation_list[0]
         if not anime['started']:
             anime['delay'] -= interval
-            if anime['delay'] <= 0:
+            if anime['delay'] <= 0.0:
                 anime['started'] = True
-        else:
-            anime['elapsed'] += interval
-        
-        # wrap elapsed time
-        if anime['elapsed'] > anime['period']:
-            if anime['loop']:
-                anime['elapsed'] -= anime['period']
-            else:
-                anime['elapsed'] = anime['period']
-                anime['done'] = True
 
-        # perform this anime
-        if anime['started']:
-            anime['callback'](self, anime['elapsed']/anime['period'])
+        else:
+            # check it's life
+            anime['elapsed'] += interval
+            if anime['elapsed'] > anime['duration']:
+                if anime['loop']:
+                    # XXX: if duration is too small?
+                    anime['elapsed'] -= anime['duration']
+                else:
+                    if anime['cleanup']: anime['cleanup']()
+                    self.animation_list.pop(0)
+                    return
+
+            # perform this animation
+            phase = anime['elapsed'] / anime['duration']
+            anime['func'](self, phase)
+            self._updated = True
+        
+    def do_update(self, interval):
+        self._updated = False
+        if len(self.animation_list) > 0:
+            self._do_update(interval)
+
+        if self.action_need_update and not self._updated:
+            self.on_update()
+            self.action_need_update = False
 
     def do_update_recursive(self, cr, x, y, interval):
         stack = [(self, x, y)]
@@ -290,27 +292,7 @@ class Node:
 
         while queue:
             current, x, y = queue.pop(0)
-
-            if current.animated and not current.animation_list:
-                # update at the end of all animation queued
-                current.animated = False
-                current.on_update()
-            elif current.animation_list:
-                # perform animation
-                current.animated = True
-                # XXX
-                tmp_list = current.animation_list.copy()
-                for name, anime in tmp_list.iteritems():
-                    current.__update_animation(name, anime, interval)
-                    
-                # actual removal of done animation
-                current.__remove_animations()
-            else:
-                # update for actions causing updates
-                for action in current.action_list.itervalues():
-                    if action['update']:
-                        current.on_update()
-                        break
+            current.do_update(interval)
 
             # draw surface to the context
             surface_x = x + current.surface_x
@@ -318,25 +300,10 @@ class Node:
             cr.set_source_surface(current.surface, surface_x, surface_y)
             cr.paint()
 
-
-
-    def do_resize_recursive(self):
-        queue = [self]
-        while queue:
-            current = queue.pop(0)
-            current.on_resize()
-            for node in current.children:
-                queue.append(node)
-
-def do_tick_recursive(top_node, interval):
-    queue = [top_node]
-    while queue:
-        current = queue.pop(0)
-        current.on_tick(interval)
-
+    def do_tick(self, interval):
+        self.on_tick(interval)
         # loop over all actions
-        current.action_need_update = False
-        tmp_list = current.action_list.copy()
+        tmp_list = self.action_list.copy()
         for name, action in tmp_list.iteritems():
             if not action['started']:
                 action['delay'] -= interval
@@ -351,18 +318,33 @@ def do_tick_recursive(top_node, interval):
                         # XXX: if duration is too small?
                         action['elapsed'] -= action['duration']
                     else:
-                        current.action_list.remove_action(name)
+                        if action['cleanup']: action['cleanup']()
+                        self.action_list.remove_action(name)
                         continue
 
                 # perform the action
                 phase = 0.0 if action['duration'] <= 0.0 \
                             else action['elapsed'] / action['duration']
-                action['func'](current, interval, phase)
+                action['func'](self, interval, phase)
                 if action['update']:
-                    current.action_need_update = True
+                    # cleaned in do_update_recursive
+                    self.action_need_update = True
 
-        for node in current.children:
-            queue.append(node)
+    def do_tick_recursive(self, interval):
+        queue = [self]
+        while queue:
+            current = queue.pop(0)
+            current.do_tick(interval)
+            for node in current.children:
+                queue.append(node)
+
+    def do_resize_recursive(self):
+        queue = [self]
+        while queue:
+            current = queue.pop(0)
+            current.on_resize()
+            for node in current.children:
+                queue.append(node)
 
 class Game:
     def __init__(self, title, width, height, fps):
@@ -415,7 +397,7 @@ class Game:
             # handle input and timer events
             self.on_tick(self.interval)
             # handle timer events of nodes
-            do_tick_recursive(self.top_node, self.interval)
+            self.top_node.do_tick_recursive(self.interval)
             # take a snapshot of the lastest state of keymap
             self.__keymap = self.__next_keymap.copy()
             # handle frame update

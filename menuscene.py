@@ -65,7 +65,7 @@ class MenuScene(Node):
                 #velocity=(0, -0.5), velocity_deviation=(0.2, 0.2), 
                 lifetime=2.0, initial_amount=100)
         self.add_node(particle)
-        particle.play(period=1, loop=True)
+        particle.play(duration=1, loop=True)
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)

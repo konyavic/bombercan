@@ -39,17 +39,10 @@ class StageScene(Node):
         self.add_node(self.map)
 
     def create_floor(self):
-        def play_blink(obj):
-            def _play_blink():
-                obj.remove_animation('fadeout')
-                obj.play_blink(name='blink', period=1, loop=True)
-            return _play_blink
-
-        def play_fadeout(obj):
-            def _play_fadeout():
-                obj.remove_animation('blink')
-                obj.play_fadeout(name='fadeout', period=1)
-            return _play_fadeout
+        def _on_enter(obj):
+            return lambda: obj.play_blink(duration=1, loop=True)
+        def _on_leave(obj):
+            return lambda: obj.play_fadeout(duration=1)
 
         cell_size = self.map.get_cell_size()
         for x in xrange(0, self.map_size[0]):
@@ -62,8 +55,9 @@ class StageScene(Node):
                             'z-index': layers['floor'] }
                         )
                 make_trackingfloor(self, obj, x, y, 
-                        on_enter=play_blink(obj),
-                        on_leave=play_fadeout(obj))
+                        on_enter=_on_enter(obj),
+                        on_leave=_on_leave(obj)
+                        )
                 self.map.add_node(obj, x, y)
 
     def create_player_at(self, x, y):
@@ -77,8 +71,8 @@ class StageScene(Node):
                 )
         # player(blocking(obj))
         make_character(self, obj, 
-                on_move=lambda dir: obj.play_moving(period=0.2, name=dir, loop=True),
-                on_stop=lambda dir: obj.remove_animation(dir))
+                on_move=lambda dir: obj.play_moving(duration=0.2, loop=True),
+                on_stop=lambda dir: obj.reset_animations()) # XXX
         make_breakable(self, obj, 
                 on_die=lambda: self.game_reset())
         make_bomber(self, obj)
@@ -315,7 +309,7 @@ class StageScene(Node):
         make_bomb(bomb, delay, power,
                 on_explode=lambda: self.explode(bomb, x, y, power))
         blocking(bomb)
-        bomb.play_counting(period=1.5, loop=True)
+        bomb.play_counting(duration=1.5, loop=True)
         self.map.add_node(bomb, x, y)
 
     def explode(self, node, x, y, power):
@@ -380,7 +374,7 @@ class StageScene(Node):
                 opt={
                     '$arms': (up, right, down, left),
                     '?cell size': lambda: self.map.get_cell_size(),
-                    '@destroy': lambda node: self.map.remove_node(node) }
+                    '@destroy': lambda: self.map.remove_node(explosion) }
                 )
         self.map.add_node(explosion, x, y, -left * cell_size, -up * cell_size)
 
@@ -392,4 +386,4 @@ class StageScene(Node):
                 center=(0.5, 0.8), center_deviation=(0.2, 0.1),
                 velocity=(0, -1.0), velocity_deviation=(0.0, 0.2), lifetime=1.0)
         self.map.add_node(particle, x, y, 0, -up * cell_size)
-        particle.play(period=3, loop=False, cleanup=lambda node: self.map.remove_node(node))
+        particle.play(duration=3, cleanup=lambda: self.map.remove_node(particle))

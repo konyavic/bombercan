@@ -3,6 +3,7 @@
 
 from time import time
 from functools import wraps
+from math import pi
 
 import gtk
 import gtk.gdk as gdk
@@ -89,16 +90,6 @@ def evaluate_style(node, style):
         elif k == 'z-index':
             node.z_index = int(value)
 
-def action(f):
-    """Decorator for action
-    """
-    @wraps(f)
-    def _action(self, name=f.__name__, 
-            duration=0.0, delay=0.0, update=False, loop=False, cleanup=None):
-        self.add_action(name, f, duration, delay, update, loop, cleanup)
-
-    return _action
-
 def animation(f):
     """Decorator for animation
     """
@@ -115,10 +106,13 @@ class Node:
         self.parent = parent
 
         self.set_style(style)
-        self.reset_surface()
+        #self.reset_surface()
+
+        self.reset_transforms()
 
         self.reset_actions()
         self.reset_animations()
+
         self.repaint()
 
     def set_style(self, style):
@@ -143,11 +137,11 @@ class Node:
         self.surface_width = self.width
         self.surface_height = self.height
 
-    def create_surface_by_scale(self, scale, rel_origin=(0.5, 0.5)):
+    def create_surface_by_scale(self, sx, sy, rel_origin=(0.5, 0.5)):
         rx = rel_origin[0] * self.width
         ry = rel_origin[1] * self.height
-        new_width = self.width * scale
-        new_height = self.height * scale
+        new_width = self.width * sx
+        new_height = self.height * sy
         delta_x = rel_origin[0] * new_width
         delta_y = rel_origin[1] * new_height
         self.create_surface( 
@@ -156,6 +150,13 @@ class Node:
                 new_width,
                 new_height
                 )
+
+    def create_surface_by_rotate(self, ang, rel_origin=(0.5, 0.5)):
+        pass
+
+    def create_surface_by_scale_rotate(self, sx, sy, ang, 
+            scale_origin=(0.5, 0.5), ang_origin=(0.5, 0.5)):
+        pass
 
     def clear_context(self, cr):
         cr.save()
@@ -232,6 +233,38 @@ class Node:
     #
     # Functions for transforms
     #
+    
+    SURFACE_CREATED = 0
+    SURFACE_RESET = 1
+    SURFACE_SCALE = 2
+
+    def reset_transforms(self):
+        self.set_scale()
+        self.set_rotate()
+        self.set_alpha()
+        self.set_translation()
+        self.surface_changed = Node.SURFACE_RESET
+    
+    def set_scale(self, sx=1.0, sy=1.0, rel_origin=(0.5, 0.5)):
+        self.sx = sx
+        self.sy = sy
+        self.scale_origin=rel_origin
+        self.surface_changed = Node.SURFACE_SCALE
+
+    def set_rotate(self, ang=0.0, rel_origin=(0.5, 0.5)):
+        self.ang=ang
+        self.rotate_origin=rel_origin
+        self.surface_changed = Node.SURFACE_SCALE
+
+    def get_context_xy(self, x, y):
+        pass
+
+    def set_alpha(self, alpha=1.0):
+        self.alpha=alpha
+
+    def set_translation(self, dx=0.0, dy=0.0):
+        self.dx = dx
+        self.dy = dy
 
     #
     # Functions to be overwritten in sub-classes
@@ -278,13 +311,20 @@ class Node:
             self._updated = True
 
     def _get_context(self):
+        state = self.surface_changed
+        if state != Node.SURFACE_CREATED:
+            self.surface_changed = Node.SURFACE_CREATED
+            if state == Node.SURFACE_RESET:
+                self.reset_surface()
+            elif state == Node.SURFACE_SCALE:
+                self.create_surface_by_scale()
+
         cr = cairo.Context(self.surface)
         self.clear_context(cr)
         return cr
         
     def do_update(self, interval):
         self._updated = False
-        # XXX: perform trasformations
         if len(self.animation_list) > 0:
             self._do_update(interval)
 
@@ -309,12 +349,10 @@ class Node:
         while queue:
             current, x, y = queue.pop(0)
             current.do_update(interval)
-
-            # draw surface to the context
-            surface_x = x + current.surface_x
-            surface_y = y + current.surface_y
-            cr.set_source_surface(current.surface, surface_x, surface_y)
-            cr.paint()
+            abs_x = x + current.surface_x + current.dx
+            abs_y = y + current.surface_y + current.dy
+            cr.set_source_surface(current.surface, abs_x, abs_y)
+            cr.paint_with_alpha(current.alpha)
 
     def do_tick(self, interval):
         self.on_tick(interval)
@@ -361,13 +399,6 @@ class Node:
             current.on_resize()
             for node in current.children:
                 queue.append(node)
-
-#
-# Functions for trasforms
-#
-
-def scale(node):
-    pass
 
 class Game:
     def __init__(self, title, width, height, fps):

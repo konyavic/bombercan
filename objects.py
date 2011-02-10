@@ -50,7 +50,7 @@ class Bomb(Node):
     @animation
     def play_counting(self, cr, phase):
         self.__scale = 1.25 - 0.25 * cos(phase * pi * 2)
-        self.create_surface_by_scale(self.__scale, rel_origin=(0.5, 0.8))
+        self.create_surface_by_scale(self.__scale, self.__scale, rel_origin=(0.5, 0.8))
         cr = cairo.Context(self.surface)
         self.__draw(cr)
 

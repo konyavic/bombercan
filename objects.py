@@ -16,7 +16,6 @@ class Bomb(Node):
     def __init__(self, parent, style):
         Node.__init__(self, parent, style)
         self.__scale = 1.0
-        self.on_update()
 
     def __draw(self, cr):
         s_width = self.width * self.__scale
@@ -44,22 +43,19 @@ class Bomb(Node):
         cr.set_source_rgb(0, 0, 0)
         cr.stroke()
 
-    def on_update(self):
-        self.reset_surface()
-        cr = cairo.Context(self.surface)
+    def on_update(self, cr):
         self.__draw(cr)
 
+    # XXX
     @animation
-    def play_counting(self, phase):
+    def play_counting(self, cr, phase):
         self.__scale = 1.25 - 0.25 * cos(phase * pi * 2)
         self.create_surface_by_scale(self.__scale, rel_origin=(0.5, 0.8))
         cr = cairo.Context(self.surface)
         self.__draw(cr)
 
 class HardBlock(Node):
-    def on_update(self):
-        cr = cairo.Context(self.surface)
-        self.clear_context(cr)
+    def on_update(self, cr):
         cr.move_to(self.width * 0.15, self.height * 0.85)
         cr.curve_to(
                 self.width * 0.3, 0,
@@ -79,10 +75,8 @@ class HardBlock(Node):
         cr.stroke()
 
 class SoftBlock(Node):
-    def on_update(self):
+    def on_update(self, cr):
         width, height = self.width, self.height
-        cr = cairo.Context(self.surface)
-        self.clear_context(cr)
         cr.move_to(width * 0.2, height * 0.85)
         cr.rel_curve_to(
                 width * 0.2, height * 0.07, 
@@ -198,11 +192,8 @@ class Can(Node):
         cr.set_line_width(1)
         cr.stroke()
 
-    def on_update(self):
+    def on_update(self, cr):
         width, height = self.width, self.height
-
-        cr = cairo.Context(self.surface)
-        self.clear_context(cr)
         cr.save()
         cr.set_line_join(cairo.LINE_JOIN_BEVEL)
         # draw feets
@@ -217,12 +208,10 @@ class Can(Node):
         cr.restore()
 
     @animation
-    def play_moving(self, phase):
+    def play_moving(self, cr, phase):
         width, height = self.width, self.height
         delta = height * 0.05 * cos(phase * pi * 2)
 
-        cr = cairo.Context(self.surface)
-        self.clear_context(cr)
         cr.save()
         cr.set_line_join(cairo.LINE_JOIN_BEVEL)
         # draw feets
@@ -237,9 +226,7 @@ class Can(Node):
         cr.restore()
 
 class Bishi(Node):
-    def on_update(self):
-        cr = cairo.Context(self.surface)
-        self.clear_context(cr)
+    def on_update(self, cr):
         cr.move_to(self.width / 2, 0)
         cr.line_to(self.width, self.height / 2)
         cr.line_to(self.width / 2, self.height)
@@ -254,12 +241,8 @@ class Floor(Node):
     def __init__(self, parent, style):
         Node.__init__(self, parent, style)
         self.color = (0.5, 0.5, 1, 0.7)
-        self.on_update()
 
-    def __draw_simple_pattern(self, color):
-        cr = cairo.Context(self.surface)
-        self.clear_context(cr)
-        
+    def __draw_simple_pattern(self, cr, color):
         cr.set_line_width(2)
         cr.set_source_rgba(*color)
         cr.paint()
@@ -268,26 +251,26 @@ class Floor(Node):
         cr.rectangle(0, 0, self.width, self.height)
         cr.stroke()
 
-    def on_update(self):
+    def on_update(self, cr):
         self.color = (0.5, 0.5, 1, 0.7)
-        self.__draw_simple_pattern(self.color)
+        self.__draw_simple_pattern(cr, self.color)
 
     @animation
-    def play_blink(self, phase):
+    def play_blink(self, cr, phase):
         c = cos(phase * pi * 2)
         self.color = (
                 0.75 - 0.25 * c, 
                 0.25 + 0.25 * c, 
                 0.5 + 0.5 * c,
                 0.7)
-        self.__draw_simple_pattern(self.color)
+        self.__draw_simple_pattern(cr, self.color)
 
     @animation
-    def play_fadeout(self, phase):
+    def play_fadeout(self, cr, phase):
         tmp_color = (
                 self.color[0] + (0.5 - self.color[0]) * phase,
                 self.color[1] + (0.5 - self.color[1]) * phase,
                 self.color[2] + (1 - self.color[2]) * phase,
                 0.7
                 )
-        self.__draw_simple_pattern(tmp_color)
+        self.__draw_simple_pattern(cr, tmp_color)

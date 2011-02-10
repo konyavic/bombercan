@@ -9,14 +9,14 @@ import gtk.gdk as gdk
 import gobject
 import cairo
 
-__style_key = ['width', 'height', 'left', 'top', 'right', 'bottom', 'aspect', 'align', 'vertical-align', 'z-index']
-__style_key_prio = dict([(__style_key[i], i) for i in range(0, len(__style_key))])
+_style_key = ['width', 'height', 'left', 'top', 'right', 'bottom', 'aspect', 'align', 'vertical-align', 'z-index']
+_style_key_prio = dict([(_style_key[i], i) for i in range(0, len(_style_key))])
 
 def style_key_prio(key):
-    if key in __style_key:
-        return __style_key_prio[key]
+    if key in _style_key:
+        return _style_key_prio[key]
     else:
-        return len(__style_key)
+        return len(_style_key)
 
 def parse_value(value, rel):
     if value.__class__ is str:
@@ -119,15 +119,16 @@ class Node:
 
         self.reset_actions()
         self.reset_animations()
+        self.repaint()
+
+    def set_style(self, style):
+        self.style = style
+        evaluate_style(self, style)
 
     #
     # Functions for manipulating surface
     #
    
-    def set_style(self, style):
-        self.style = style
-        evaluate_style(self, style)
-
     def create_surface(self, x, y, width, height):
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(width), int(height))
         self.surface_x = x
@@ -175,7 +176,7 @@ class Node:
         node.parent = None
 
     #
-    # Functions for manipulating actions
+    # Functions for actions
     #
 
     def add_action(self, name, func, 
@@ -200,8 +201,11 @@ class Node:
         self.action_list = {}
         self.action_need_update = False
 
+    def repaint(self):
+        self.action_need_update = True
+
     #
-    # Functions for manipulating animations
+    # Functions for animations
     #
 
     def set_animation(self, func, 
@@ -226,16 +230,20 @@ class Node:
         self.animation_list = []
 
     #
-    # Functions could be overwritten in sub-classes
+    # Functions for transforms
+    #
+
+    #
+    # Functions to be overwritten in sub-classes
     #
     
-    def on_update(self):
+    def on_update(self, cr):
         pass
 
     def on_resize(self):
         evaluate_style(self, self.style)
         self.reset_surface()
-        self.on_update()
+        self.repaint()
 
     def on_tick(self, interval):
         pass
@@ -265,16 +273,24 @@ class Node:
 
             # perform this animation
             phase = anime['elapsed'] / anime['duration']
-            anime['func'](self, phase)
+            cr = self._get_context()
+            anime['func'](self, cr, phase)
             self._updated = True
+
+    def _get_context(self):
+        cr = cairo.Context(self.surface)
+        self.clear_context(cr)
+        return cr
         
     def do_update(self, interval):
         self._updated = False
+        # XXX: perform trasformations
         if len(self.animation_list) > 0:
             self._do_update(interval)
 
         if self.action_need_update and not self._updated:
-            self.on_update()
+            cr = self._get_context()
+            self.on_update(cr)
             self.action_need_update = False
 
     def do_update_recursive(self, cr, x, y, interval):
@@ -345,6 +361,13 @@ class Node:
             current.on_resize()
             for node in current.children:
                 queue.append(node)
+
+#
+# Functions for trasforms
+#
+
+def scale(node):
+    pass
 
 class Game:
     def __init__(self, title, width, height, fps):

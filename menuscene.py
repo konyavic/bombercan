@@ -69,9 +69,8 @@ class MenuScene(Node):
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
-        self.on_update()
 
-    def on_update(self):
+    def on_update(self, cr):
         scale_width = self.width / float(self.texture['bgimg'].get_width())
         scale_height = self.height / float(self.texture['bgimg'].get_height())
         if scale_width < scale_height:

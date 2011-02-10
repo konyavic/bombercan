@@ -176,11 +176,9 @@ class Label(Node):
         else:
             self.bgcolor = (0, 0, 0, 0)
 
-        self.on_update()
-
     def set_text(self, text):
         self.text = text
-        self.on_update()
+        self.repaint()
 
     def get_size(self):
         cr = cairo.Context(self.surface)
@@ -190,7 +188,7 @@ class Label(Node):
         layout.set_font_description(self.__font)
         return layout.get_pixel_size()
 
-    def on_update(self):
+    def on_update(self, cr):
         size = self.get_size()
         self.style['width'], self.style['height'] = size
         self.set_style(self.style)
@@ -239,6 +237,7 @@ class Selections(Node):
         for label in self.labels:
             self.add_node(label)
 
+        # XXX: label size 
         self.curser = Bomb(
                 parent=self,
                 style={
@@ -251,10 +250,7 @@ class Selections(Node):
         self.add_node(self.curser)
         self.select(0)
 
-        self.on_update()
-
-    def on_update(self):
-        cr = cairo.Context(self.surface)
+    def on_update(self, cr):
         cr.set_source_rgba(*self.bgcolor)
         cr.paint()
 
@@ -290,18 +286,16 @@ class MessageBox(Node):
     def __init__(self, parent, style, opt):
         Node.__init__(self, parent, style)
         self.showing = False
-        self.on_update()
 
-    def __draw_box(self, box_width, box_height, alpha):
+    def __draw_box(self, cr, box_width, box_height, alpha):
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
-        cr = cairo.Context(self.surface)
         cr.set_source_rgba(0, 0, 0, alpha)
         cr.rectangle(0, 0, box_width, box_height)
         cr.fill()
 
-    def on_update(self):
+    def on_update(self, cr):
         if self.showing:
-            self.__draw_box(self.width, self.height, 0.5)
+            self.__draw_box(cr, self.width, self.height, 0.5)
         else:
             self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
 

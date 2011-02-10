@@ -152,7 +152,7 @@ def make_simpleai(stage, node, timeout=3.0):
         self.ai_timecount += interval
         # XXX
         #if (self.ai_timecount < timeout
-                and self.ai_old_pos != (self.x, self.y)):
+        #        and self.ai_old_pos != (self.x, self.y)):
         if (self.ai_timecount < timeout):
             return
         

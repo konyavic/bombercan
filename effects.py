@@ -18,15 +18,13 @@ class ExplosionEffect(Node):
         self.get_cell_size = opt['?cell size']
         self.do_destroy = opt['@destroy']
 
-        def animation(self, phase):
+        def animation(self, cr, phase):
             cell_size = self.get_cell_size()
             left = self.arms[3] * cell_size
             up = self.arms[0] * cell_size
             right = self.arms[1] * cell_size
             down = self.arms[2] * cell_size
 
-            cr = cairo.Context(self.surface)
-            self.clear_context(cr)
             cr.move_to(left, up)
             cr.rel_line_to(0, -up)
             cr.rel_line_to(cell_size, 0)
@@ -132,10 +130,8 @@ class ParticleEffect(Node):
             self.spawn()
 
     @animation
-    def play(self, phase):
+    def play(self, cr, phase):
         rect = (self.width, self.height)
-        cr = cairo.Context(self.surface)
-        self.clear_context(cr)
         for p in self.particles:
             x = p.position[0] * rect[0]
             y = p.position[1] * rect[1]

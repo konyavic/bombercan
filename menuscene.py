@@ -7,6 +7,7 @@ import gobject
 import cairo
 
 from pnode import Node
+from objects import *
 from uicomponents import *
 from effects import ParticleEffect
 
@@ -67,6 +68,11 @@ class MenuScene(Node):
         self.add_node(particle)
         particle.set_alpha(0.8)
         particle.play(duration=1, loop=True)
+
+        rect = DummyRect(self, {'width': '20%', 'height': '20%', 'top': '20%', 'left': '20%', 'aspect': 1.0})
+        self.add_node(rect)
+        rect.set_alpha(0.5)
+        rect.set_scale(2.0, 2.0)
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)

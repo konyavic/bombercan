@@ -304,7 +304,7 @@ class StageScene(Node):
         make_bomb(bomb, delay, power,
                 on_explode=lambda: self.explode(bomb, x, y, power))
         blocking(bomb)
-        bomb.play_counting(duration=1.5, loop=True)
+        bomb.count()
         self.map.add_node(bomb, x, y)
 
     def explode(self, node, x, y, power):

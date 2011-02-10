@@ -1,9 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from math import sqrt
 from time import time
 from functools import wraps
-from math import pi
 
 import gtk
 import gtk.gdk as gdk
@@ -152,7 +152,22 @@ class Node:
                 )
 
     def create_surface_by_rotate(self, ang, rel_origin=(0.5, 0.5)):
-        pass
+        rx = rel_origin[0] * self.width
+        ry = rel_origin[1] * self.height
+        # the corner with max length from the origin
+        mx = rel_origin[0] if rel_origin[0] > 0.5 else 1.0 - rel_origin[0]
+        my = rel_origin[1] if rel_origin[1] > 0.5 else 1.0 - rel_origin[1]
+        mlen = sqrt(mx ** 2 + my ** 2)
+        new_width = self.width * mlen * 2
+        new_height = self.width * mlen * 2
+        delta_x = rel_origin[0] * new_width
+        delta_y = rel_origin[1] * new_height
+        self.create_surface( 
+                rx - delta_x,
+                ry - delta_y, 
+                new_width,
+                new_height
+                )
 
     def create_surface_by_scale_rotate(self, sx, sy, ang, 
             scale_origin=(0.5, 0.5), ang_origin=(0.5, 0.5)):
@@ -235,29 +250,25 @@ class Node:
     #
     
     SURFACE_CREATED = 0
-    SURFACE_RESET = 1
-    SURFACE_SCALE = 2
+    SURFACE_CHANGED = 1 << 0
+    SURFACE_SCALE   = 1 << 1
+    SURFACE_ROTATE  = 1 << 2
 
     def reset_transforms(self):
-        self.set_scale()
-        self.set_rotate()
         self.set_alpha()
         self.set_translation()
-        self.surface_changed = Node.SURFACE_RESET
+        self.surface_changed = Node.SURFACE_CHANGED
     
     def set_scale(self, sx=1.0, sy=1.0, rel_origin=(0.5, 0.5)):
         self.sx = sx
         self.sy = sy
         self.scale_origin=rel_origin
-        self.surface_changed = Node.SURFACE_SCALE
+        self.surface_changed |= Node.SURFACE_SCALE | Node.SURFACE_CHANGED
 
     def set_rotate(self, ang=0.0, rel_origin=(0.5, 0.5)):
         self.ang=ang
         self.rotate_origin=rel_origin
-        self.surface_changed = Node.SURFACE_SCALE
-
-    def get_context_xy(self, x, y):
-        pass
+        self.surface_changed |= Node.SURFACE_ROTATE | Node.SURFACE_CHANGED
 
     def set_alpha(self, alpha=1.0):
         self.alpha=alpha
@@ -312,15 +323,24 @@ class Node:
 
     def _get_context(self):
         state = self.surface_changed
-        if state != Node.SURFACE_CREATED:
+        if state & Node.SURFACE_CHANGED:
             self.surface_changed = Node.SURFACE_CREATED
-            if state == Node.SURFACE_RESET:
+            if state == Node.SURFACE_CHANGED:
                 self.reset_surface()
-            elif state == Node.SURFACE_SCALE:
-                self.create_surface_by_scale()
+                cr = cairo.Context(self.surface)
+            elif state & Node.SURFACE_SCALE and state & Node.SURFACE_ROTATE:
+                self.create_surface_by_scale_rotate()
+            elif state & Node.SURFACE_SCALE:
+                self.create_surface_by_scale(self.sx, self.sy, self.scale_origin)
+                cr = cairo.Context(self.surface)
+                cr.scale(self.sx, self.sy)
+                self.clear_context(cr)
+            elif state == Node.SURFACE_ROTATE:
+                self.create_surface_by_rotate()
+        else:
+            cr = cairo.Context(self.surface)
+            self.clear_context(cr)
 
-        cr = cairo.Context(self.surface)
-        self.clear_context(cr)
         return cr
         
     def do_update(self, interval):

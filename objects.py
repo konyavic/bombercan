@@ -15,12 +15,10 @@ from pnode import *
 class Bomb(Node):
     def __init__(self, parent, style):
         Node.__init__(self, parent, style)
-        self.__scale = 1.0
 
     def __draw(self, cr):
-        s_width = self.width * self.__scale
-        s_height = self.height * self.__scale
-        self.clear_context(cr)
+        s_width = self.width
+        s_height = self.height
         cr.arc(
                 s_width * 0.6, 
                 s_height * 0.33, 
@@ -46,13 +44,13 @@ class Bomb(Node):
     def on_update(self, cr):
         self.__draw(cr)
 
-    # XXX
-    @animation
-    def play_counting(self, cr, phase):
-        self.__scale = 1.25 - 0.25 * cos(phase * pi * 2)
-        self.create_surface_by_scale(self.__scale, self.__scale, rel_origin=(0.5, 0.8))
-        cr = cairo.Context(self.surface)
-        self.__draw(cr)
+    # XXX: move to controller
+    def count(self):
+        def _count(self, interval, phase):
+            s = 1.25 - 0.25 * cos(phase * pi * 2)
+            self.set_scale(s, s, (0.5, 0.8))
+
+        self.add_action('count', _count, duration=1.5, loop=True, update=True)
 
 class HardBlock(Node):
     def on_update(self, cr):
@@ -274,3 +272,12 @@ class Floor(Node):
                 0.7
                 )
         self.__draw_simple_pattern(cr, tmp_color)
+
+class DummyRect(Node):
+    def on_update(self, cr):
+        cr.set_source_rgb(0, 0, 1)
+        cr.paint()
+        cr.rectangle(0, 0, self.width, self.height)
+        cr.set_source_rgb(1, 1, 0)
+        cr.set_line_width(2.5)
+        cr.stroke()

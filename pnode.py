@@ -171,6 +171,7 @@ class Node:
 
     def create_surface_by_scale_rotate(self, sx, sy, ang, 
             scale_origin=(0.5, 0.5), ang_origin=(0.5, 0.5)):
+        # XXX: to be implemented
         pass
 
     def clear_context(self, cr):
@@ -322,6 +323,13 @@ class Node:
             self._updated = True
 
     def _get_context(self):
+        """Get the cairo context of this node.
+
+        1) re-create the surface as needed
+        2) push the transformation matrix to the context
+        3) return this context
+
+        """
         state = self.surface_changed
         if state & Node.SURFACE_CHANGED:
             self.surface_changed = Node.SURFACE_CREATED
@@ -329,6 +337,7 @@ class Node:
                 self.reset_surface()
                 cr = cairo.Context(self.surface)
             elif state & Node.SURFACE_SCALE and state & Node.SURFACE_ROTATE:
+                # XXX: to be implemented
                 self.create_surface_by_scale_rotate()
             elif state & Node.SURFACE_SCALE:
                 self.create_surface_by_scale(self.sx, self.sy, self.scale_origin)

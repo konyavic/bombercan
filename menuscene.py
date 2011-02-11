@@ -1,17 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from math import pi
-
 import gtk
 import gtk.gdk as gdk
 import gobject
 import cairo
 
-from pnode import Node
+from pnode import *
 from objects import *
 from uicomponents import *
-from effects import ParticleEffect
+from effects import *
+from motions import *
 
 class MenuScene(Node):
     def __init__(self, parent, style, opt):
@@ -73,9 +72,8 @@ class MenuScene(Node):
 
         rect = DummyRect(self, {'width': '10%', 'height': '10%', 'top': '20%', 'left': '20%', 'aspect': 1.0})
         self.add_node(rect)
-        def _rot(self, interval, phase):
-            self.set_rotate(pi * 2 * phase, (0.8, 1,1))
-        rect.add_action('rotation', _rot, duration=5.0, loop=True, update=True)
+        use_scale_rotation(rect)
+        rect.scale((2.0, 2.0), 2, loop=True, harmonic=True)
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)

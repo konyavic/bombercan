@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from math import pi
+
 import gtk
 import gtk.gdk as gdk
 import gobject
@@ -176,6 +178,8 @@ class Label(Node):
         else:
             self.bgcolor = (0, 0, 0, 0)
 
+        self.repaint()
+
     def set_text(self, text):
         self.text = text
         self.repaint()
@@ -246,9 +250,12 @@ class Selections(Node):
                     'width': self.labels[0].height,
                     'height': self.labels[0].height }
                 )
-        self.curser.count()
+        #self.curser.count()
         self.add_node(self.curser)
         self.select(0)
+        def _rot(self, interval, phase):
+            self.set_rotate(pi * 2 * phase)
+        self.curser.add_action('rotation', _rot, duration=2.0, loop=True, update=True)
 
     def on_update(self, cr):
         cr.set_source_rgba(*self.bgcolor)

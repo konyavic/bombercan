@@ -157,11 +157,11 @@ class Node:
         # the corner with max length from the origin
         mx = rel_origin[0] if rel_origin[0] > 0.5 else 1.0 - rel_origin[0]
         my = rel_origin[1] if rel_origin[1] > 0.5 else 1.0 - rel_origin[1]
-        mlen = sqrt(mx ** 2 + my ** 2)
-        new_width = self.width * mlen * 2
-        new_height = self.width * mlen * 2
-        delta_x = rel_origin[0] * new_width
-        delta_y = rel_origin[1] * new_height
+        mlen = sqrt((self.width * mx) ** 2 + (self.height * my) ** 2)
+        new_width = mlen * 2
+        new_height = mlen * 2
+        delta_x = 0.5 * new_width
+        delta_y = 0.5 * new_height
         self.create_surface( 
                 rx - delta_x,
                 ry - delta_y, 
@@ -335,8 +335,15 @@ class Node:
                 cr = cairo.Context(self.surface)
                 cr.scale(self.sx, self.sy)
                 self.clear_context(cr)
-            elif state == Node.SURFACE_ROTATE:
-                self.create_surface_by_rotate()
+            elif state & Node.SURFACE_ROTATE:
+                self.create_surface_by_rotate(self.ang, self.rotate_origin)
+                cr = cairo.Context(self.surface)
+                delta = self.surface_width * 0.5
+                cr.translate(delta, delta)
+                cr.rotate(self.ang)
+                cr.translate(-delta, -delta)
+                cr.translate(-self.surface_x, -self.surface_y)
+                self.clear_context(cr)
         else:
             cr = cairo.Context(self.surface)
             self.clear_context(cr)

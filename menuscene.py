@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from math import pi
+
 import gtk
 import gtk.gdk as gdk
 import gobject
@@ -69,10 +71,11 @@ class MenuScene(Node):
         particle.set_alpha(0.8)
         particle.play(duration=1, loop=True)
 
-        rect = DummyRect(self, {'width': '20%', 'height': '20%', 'top': '20%', 'left': '20%', 'aspect': 1.0})
+        rect = DummyRect(self, {'width': '10%', 'height': '10%', 'top': '20%', 'left': '20%', 'aspect': 1.0})
         self.add_node(rect)
-        rect.set_alpha(0.5)
-        rect.set_scale(2.0, 2.0)
+        def _rot(self, interval, phase):
+            self.set_rotate(pi * 2 * phase, (0.8, 1,1))
+        rect.add_action('rotation', _rot, duration=5.0, loop=True, update=True)
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)

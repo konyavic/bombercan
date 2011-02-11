@@ -44,7 +44,7 @@ class Bomb(Node):
     def on_update(self, cr):
         self.__draw(cr)
 
-    # XXX: move to controller
+    # XXX: move to 'motions'
     def count(self):
         def _count(self, interval, phase):
             s = 1.25 - 0.25 * cos(phase * pi * 2)
@@ -275,9 +275,21 @@ class Floor(Node):
 
 class DummyRect(Node):
     def on_update(self, cr):
-        cr.set_source_rgb(0, 0, 1)
+        # surface
+        cr.set_source_rgba(0, 0, 1, 0.5)
         cr.paint()
+        # drawing space
         cr.rectangle(0, 0, self.width, self.height)
         cr.set_source_rgb(1, 1, 0)
+        cr.set_line_width(2.5)
+        cr.stroke()
+        # center of drawing space
+        center = self.width * 0.5, self.height * 0.5
+        cr.move_to(center[0] - 5, center[1] - 5)
+        cr.rel_line_to(10, 0)
+        cr.rel_line_to(0, 10)
+        cr.rel_line_to(-10, 0)
+        cr.close_path()
+        cr.set_source_rgb(1, 0, 0)
         cr.set_line_width(2.5)
         cr.stroke()

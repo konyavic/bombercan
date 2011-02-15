@@ -163,16 +163,19 @@ class MapContainer(Node):
 
 class Label(Node):
     def __init__(self, parent, style, 
-            text='', font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), margin=(10, 10, 10, 10)):
+            text='', font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), 
+            margin=(0, 0, 0, 0), center=False):
 
         Node.__init__(self, parent, style)
         self.text = text
         self.font = font
-        self.margin = margin
-        self._font = pango.FontDescription(self.font)
-
         self.color = color
         self.bgcolor=bgcolor
+        # XXX: margin should be merged into node style
+        self.margin = margin
+        self.center = center
+
+        self._font = pango.FontDescription(self.font)
 
     def set_text(self, text):
         self.text = text
@@ -186,61 +189,54 @@ class Label(Node):
         cr.rectangle(margin[3], margin[0], w, h)
         cr.fill()
 
+        # adjust the size by scaling before showing the text
         cr.set_source_rgba(*self.color)
-        cr.move_to(margin[3], margin[0])
+        cr.move_to(0, 0)
         pcr = pangocairo.CairoContext(cr)
         layout = pcr.create_layout()
         layout.set_text(self.text)
         layout.set_font_description(self._font)
         size = layout.get_pixel_size()
         factor = min(w / float(size[0]), h / float(size[1]))
+        if self.center:
+            cr.move_to(
+                    ((self.width - factor * size[0]) / 2.0), 
+                    ((self.height - factor * size[1]) / 2.0))
+        else:
+            cr.move_to(margin[3], margin[0])
+
         cr.scale(factor, factor)
         pcr.show_layout(layout)
     
 class Selections(Node):
-    def __init__(self, parent, style, opt):
+    def __init__(self, parent, style, 
+            labels, font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), curser=None):
         Node.__init__(self, parent, style)
 
-        # input attributes
-        self.labels = opt['$labels']
-        if opt.has_key('$font'):
-            self.font = opt['$font']
+        self.labels = labels
+        self.font = font
+        self.color = color
+        self.bgcolor = bgcolor
 
-        if opt.has_key('$bgcolor'):
-            self.bgcolor = opt['$bgcolor']
-        else:
-            self.bgcolor = (0, 0, 0, 0)
-
-        # sub-nodes
-        self.labels = [ Label(
+        self._labels = [ Label(
             parent=self,
             style={
-                'top': str((i + 1) * 100 / float(len(self.labels) + 2)) + '%',
+                'top': str(i * 100 / float(len(self.labels))) + '%',
+                'height': str(100 / float(len(self.labels))) + '%',
                 'align': 'center'
                 },
             text=self.labels[i],
-            color=(1, 1, 1, 1),
-            font=self.font
+            color=self.color,
+            font=self.font,
+            center=True
             ) for i in range(0, len(self.labels)) ]
 
-        for label in self.labels:
+        for label in self._labels:
             self.add_node(label)
 
-        # XXX: label size 
-        self.curser = Bomb(
-                parent=self,
-                style={
-                    'top': self.labels[0].y,
-                    'left': self.labels[0].x - self.labels[0].height / 2,
-                    'width': self.labels[0].height,
-                    'height': self.labels[0].height }
-                )
-        #self.curser.count()
-        self.add_node(self.curser)
+        self.curser = curser
+        self.add_node(curser)
         self.select(0)
-        def _rot(self, interval, phase):
-            self.set_rotate(pi * 2 * phase)
-        self.curser.add_action('rotation', _rot, duration=2.0, loop=True, update=True)
 
     def on_update(self, cr):
         cr.set_source_rgba(*self.bgcolor)
@@ -248,16 +244,16 @@ class Selections(Node):
 
     def on_resize(self):
         Node.on_resize(self)
-        self.labels[self.selected].on_resize()
+        self._labels[self.selected].on_resize()
         self.select(self.selected)
 
     def select(self, i):
         self.selected = i
         self.curser.set_style({
-            'top': self.labels[i].y,
-            'left': self.labels[i].x - self.labels[i].height,
-            'width': self.labels[i].height,
-            'height': self.labels[i].height,
+            'top': self._labels[i].y,
+            'left': self._labels[i].x - self._labels[i].height,
+            'width': self._labels[i].height,
+            'height': self._labels[i].height,
             })
 
     def select_up(self):

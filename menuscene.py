@@ -20,7 +20,8 @@ class MenuScene(Node):
         self.key_down = key_down
         self.on_game_start = on_game_start
 
-        # sub-nodes
+        # selection menu
+        self.curser = Bomb(parent=self, style={})
         self.sel = Selections(
                 parent=self,
                 style={
@@ -29,26 +30,27 @@ class MenuScene(Node):
                     'width': '50%',
                     'height': '30%'
                     },
-                opt={
-                    '$font': 'MS Gothic 18',
-                    #'$labels': [u'スタート', u'オプション', u'（゜д゜;;'],
-                    '$labels': [u'Press Space'],
-                    '$bgcolor': (0.3, 0.3, 0.7, 0.7)
-                    }
+                font='MS Gothic',
+                labels=(u'Press Space', u'test', u'test2'),
+                bgcolor=(0.3, 0.3, 0.7, 0.7),
+                curser=self.curser
                 )
         self.add_node(self.sel)
+        self.curser.count()
 
-        text = Label(
+        # the title
+        title = Label(
                 parent=self,
                 style={
-                    'top': '30%',
-                    'align': 'center'
+                    'top': '20%',
+                    'left': '15%',
+                    'right': '15%'
                     },
                 text=u'ボンバー缶',
-                font='MS Gothic bold 30',
+                font='MS Gothic bold',
                 color=(1, 1, 0.3, 1),
                 )
-        self.add_node(text)
+        self.add_node(title)
 
         particle = ParticleEffect(self, 
                 {'width': '50%', 'height': '50%', 'align': 'center', 'vertical-align': 'bottom'},
@@ -66,11 +68,6 @@ class MenuScene(Node):
         self.add_node(particle)
         particle.set_alpha(0.8)
         particle.play(duration=1, loop=True)
-
-        rect = DummyRect(self, {'width': '10%', 'height': '10%', 'top': '20%', 'left': '20%', 'aspect': 1.0})
-        self.add_node(rect)
-        use_scale_rotation(rect)
-        rect.scale((2.0, 2.0), 2, loop=True, harmonic=True)
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png('menu_bg.png')

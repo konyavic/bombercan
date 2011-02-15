@@ -332,7 +332,6 @@ class Node(object):
         """
         state = self.surface_changed
         if state & Node.SURFACE_CHANGED:
-            self.surface_changed = Node.SURFACE_CREATED
             if state == Node.SURFACE_CHANGED:
                 self.reset_surface()
                 cr = cairo.Context(self.surface)

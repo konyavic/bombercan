@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from math import pi
+from math import sin
 
 import gtk
 import gtk.gdk as gdk
@@ -244,6 +245,8 @@ class Selections(Node):
 
     def on_resize(self):
         Node.on_resize(self)
+        # resize the selected label here to get the updated position
+        # XXX: bad
         self._labels[self.selected].on_resize()
         self.select(self.selected)
 
@@ -256,18 +259,18 @@ class Selections(Node):
             'height': self._labels[i].height,
             })
 
-    def select_up(self):
-        i = self.selected - 1
-        if i < 0:
-            i = len(self.labels) - 1
+        def _shake(self, interval, phase):
+            a = (pi / 8) * (1.0 - phase)
+            self.set_rotate(a * sin(phase * 8 * 2 * pi))
 
+        self._labels[self.selected].add_action('shake', _shake, duration=2, update=True)
+
+    def select_up(self):
+        i = (self.selected - 1) % len(self.labels)
         self.select(i)
 
     def select_down(self):
-        i = self.selected + 1
-        if i >= len(self.labels):
-            i = 0
-
+        i = (self.selected + 1) % len(self.labels)
         self.select(i)
 
 class MessageBox(Node):

@@ -408,7 +408,7 @@ class Node(object):
                         action['elapsed'] -= action['duration']
                     else:
                         if action['cleanup']: action['cleanup']()
-                        self.action_list.remove_action(name)
+                        del self.action_list[name]
                         continue
 
                 # perform the action

@@ -13,13 +13,12 @@ from effects import *
 from motions import *
 
 class MenuScene(Node):
-    def __init__(self, parent, style, opt):
+    def __init__(self, parent, style, key_down, key_up, on_game_start):
         Node.__init__(self, parent, style)
 
-        self.bgimg = opt['$bgimg']
-        self.key_up = opt['@key up']
-        self.key_down = opt['@key down']
-        self.game_start = opt['@game start']
+        self.key_up = key_up
+        self.key_down = key_down
+        self.on_game_start = on_game_start
 
         # sub-nodes
         self.sel = Selections(
@@ -31,7 +30,7 @@ class MenuScene(Node):
                     'height': '30%'
                     },
                 opt={
-                    '$font': 'Meiryo, MS Gothic 18',
+                    '$font': 'MS Gothic 18',
                     #'$labels': [u'スタート', u'オプション', u'（゜д゜;;'],
                     '$labels': [u'Press Space'],
                     '$bgcolor': (0.3, 0.3, 0.7, 0.7)
@@ -45,11 +44,9 @@ class MenuScene(Node):
                     'top': '30%',
                     'align': 'center'
                     },
-                opt={
-                    '$text': u'ボンバー缶',
-                    '$font': 'Meiryo, MS Gothic bold 30',
-                    '$color': (1, 1, 0.3, 1),
-                    }
+                text=u'ボンバー缶',
+                font='MS Gothic bold 30',
+                color=(1, 1, 0.3, 1),
                 )
         self.add_node(text)
 
@@ -76,7 +73,7 @@ class MenuScene(Node):
         rect.scale((2.0, 2.0), 2, loop=True, harmonic=True)
 
         self.texture = {}
-        self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
+        self.texture['bgimg'] = cairo.ImageSurface.create_from_png('menu_bg.png')
 
     def on_update(self, cr):
         scale_width = self.width / float(self.texture['bgimg'].get_width())
@@ -105,5 +102,5 @@ class MenuScene(Node):
             self.sel.select_down()
 
         if self.key_up('space'):
-            self.game_start()
+            self.on_game_start()
 

@@ -21,24 +21,20 @@ class Bombercan(Game):
             self.stage = StageScene(
                     parent=self,
                     style={},
-                    opt={
-                        '$map size': [15, 15], 
-                        '$margin': [20, 20, 20, 20],
-                        '$bgimg': 'stage_bg.png',
-                        '@key up': self.key_up,
-                        '@key down': self.key_down,
-                        '@game reset': game_reset}
+                    map_size=(15, 15), 
+                    margin=(20, 20, 20, 20),
+                    key_up=self.key_up,
+                    key_down=self.key_down,
+                    on_game_reset=game_reset
                     )
 
 
         self.menu = MenuScene(
                 parent=self,
                 style={},
-                opt={
-                    '$bgimg': 'menu_bg.png',
-                    '@key up': self.key_up,
-                    '@key down': self.key_down,
-                    '@game start': game_start}
+                key_up=self.key_up,
+                key_down=self.key_down,
+                on_game_start=game_start
                 )
 
         game_reset()

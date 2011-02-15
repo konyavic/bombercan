@@ -14,13 +14,10 @@ from pnode import Node
 from objects import Bomb
 
 class MapContainer(Node):
-    def __init__(self, parent, style, opt):
+    def __init__(self, parent, style, map_size):
         Node.__init__(self, parent, style)
+        self.map_size = map_size
 
-        # input attributes
-        self.map_size = opt['$map size']
-
-        # private attributes
         self.__map = [[ [] for y in xrange(0, self.map_size[1]) ] for x in xrange(0, self.map_size[0]) ]
         self.__delta = {}
         self.__cell = {}
@@ -165,49 +162,39 @@ class MapContainer(Node):
         return (node.x - delta[0], node.y - delta[1])
 
 class Label(Node):
-    def __init__(self, parent, style, opt):
+    def __init__(self, parent, style, 
+            text='', font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), margin=(10, 10, 10, 10)):
+
         Node.__init__(self, parent, style)
-        self.text = opt['$text']
-        self.color = opt['$color']
-        if opt.has_key('$font'):
-            self.font = opt['$font']
-            self.__font = pango.FontDescription(self.font)
+        self.text = text
+        self.font = font
+        self.margin = margin
+        self._font = pango.FontDescription(self.font)
 
-        if opt.has_key('$bgcolor'):
-            self.bgcolor = opt['$bgcolor']
-        else:
-            self.bgcolor = (0, 0, 0, 0)
-
-        self.repaint()
+        self.color = color
+        self.bgcolor=bgcolor
 
     def set_text(self, text):
         self.text = text
         self.repaint()
 
-    def get_size(self):
-        cr = cairo.Context(self.surface)
-        pcr = pangocairo.CairoContext(cr)
-        layout = pcr.create_layout()
-        layout.set_text(self.text)
-        layout.set_font_description(self.__font)
-        return layout.get_pixel_size()
-
     def on_update(self, cr):
-        size = self.get_size()
-        self.style['width'], self.style['height'] = size
-        self.set_style(self.style)
-        self.reset_surface()
-
-        cr = cairo.Context(self.surface)
+        margin = self.margin
+        w = self.width - margin[1] - margin[3]
+        h = self.height - margin[0] - margin[2]
         cr.set_source_rgba(*self.bgcolor)
-        cr.paint()
+        cr.rectangle(margin[3], margin[0], w, h)
+        cr.fill()
 
         cr.set_source_rgba(*self.color)
-        cr.move_to(0, 0)
+        cr.move_to(margin[3], margin[0])
         pcr = pangocairo.CairoContext(cr)
         layout = pcr.create_layout()
         layout.set_text(self.text)
-        layout.set_font_description(self.__font)
+        layout.set_font_description(self._font)
+        size = layout.get_pixel_size()
+        factor = min(w / float(size[0]), h / float(size[1]))
+        cr.scale(factor, factor)
         pcr.show_layout(layout)
     
 class Selections(Node):
@@ -231,11 +218,9 @@ class Selections(Node):
                 'top': str((i + 1) * 100 / float(len(self.labels) + 2)) + '%',
                 'align': 'center'
                 },
-            opt={
-                '$text': self.labels[i],
-                '$color': (1, 1, 1, 1),
-                '$font': self.font
-                }
+            text=self.labels[i],
+            color=(1, 1, 1, 1),
+            font=self.font
             ) for i in range(0, len(self.labels)) ]
 
         for label in self.labels:

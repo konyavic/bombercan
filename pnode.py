@@ -100,11 +100,11 @@ def animation(f):
 
     return _animation
 
-class Node:
+class Node(object):
     def __init__(self, parent, style):
         self.children = []
+        # XXX: repack after tree setup
         self.parent = parent
-
         self.set_style(style)
         #self.reset_surface()
 
@@ -436,7 +436,7 @@ class Node:
             for node in current.children:
                 queue.append(node)
 
-class Game:
+class Game(object):
     def __init__(self, title, width, height, fps):
         self.title = title
         self.screen_size = [width, height]

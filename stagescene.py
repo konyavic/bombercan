@@ -32,9 +32,9 @@ class StageScene(Node):
                     'left': self.margin[3],
                     'aspect': 1.0,
                     'align': 'center',
-                    'vertical-align': 'center' },
-                opt={
-                    '$map size': self.map_size }
+                    'vertical-align': 'center' 
+                    },
+                map_size=self.map_size
                 )
         self.add_node(self.map)
 
@@ -153,14 +153,13 @@ class StageScene(Node):
             self.create_soft_block_at(x, y)
             count -= 1
 
-    def __init__(self, parent, style, opt):
+    def __init__(self, parent, style, map_size, margin, key_up, key_down, on_game_reset):
         Node.__init__(self, parent, style)
-        self.map_size = opt['$map size']
-        self.margin = opt['$margin']
-        self.bgimg = opt['$bgimg']
-        self.key_up = opt['@key up']
-        self.key_down = opt['@key down']
-        self.game_reset = opt['@game reset']
+        self.map_size = map_size
+        self.margin = margin
+        self.key_up = key_up
+        self.key_down = key_down
+        self.game_reset = on_game_reset
 
         self.create_map()
         self.create_floor()
@@ -183,7 +182,7 @@ class StageScene(Node):
         self.add_node(self.box)
 
         self.texture = {}
-        self.texture['bgimg'] = cairo.ImageSurface.create_from_png(self.bgimg)
+        self.texture['bgimg'] = cairo.ImageSurface.create_from_png('stage_bg.png')
 
     def on_update(self, cr):
         scale_width = self.width / float(self.texture['bgimg'].get_width())

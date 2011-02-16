@@ -13,7 +13,7 @@ from pnode import *
 
 class ExplosionEffect(Node):
     def __init__(self, parent, style, opt):
-        Node.__init__(self, parent, style)
+        super(ExplosionEffect, self).__init__(parent, style)
         self.arms = opt['$arms']
         self.get_cell_size = opt['?cell size']
         self.do_destroy = opt['@destroy']
@@ -53,7 +53,7 @@ class ParticleEffect(Node):
             v_size=0, size_deviation=0, accel=(0, 0),
             max_amount=0, initial_amount=0, spawn_interval=0.0):
 
-        Node.__init__(self, parent, style)
+        super(ParticleEffect, self).__init__(parent, style)
         # color
         self.color = color
         self.v_color = v_color

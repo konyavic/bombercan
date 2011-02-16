@@ -14,7 +14,7 @@ from motions import *
 
 class MenuScene(Node):
     def __init__(self, parent, style, key_down, key_up, on_game_start):
-        Node.__init__(self, parent, style)
+        super(MenuScene, self).__init__(parent, style)
 
         self.key_up = key_up
         self.key_down = key_down

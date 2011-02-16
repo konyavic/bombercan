@@ -8,7 +8,7 @@ from printfps import printfps
 
 class Bombercan(Game):
     def __init__(self):
-        Game.__init__(self, 'BomberCan', 500, 500, 80)
+        super(Bombercan, self).__init__('BomberCan', 500, 500, 80)
 
         def game_start():
             self.top_node=self.stage

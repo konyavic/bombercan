@@ -16,7 +16,7 @@ from objects import Bomb
 
 class MapContainer(Node):
     def __init__(self, parent, style, map_size):
-        Node.__init__(self, parent, style)
+        super(MapContainer, self).__init__(parent, style)
         self.map_size = map_size
 
         self.__map = [[ [] for y in xrange(0, self.map_size[1]) ] for x in xrange(0, self.map_size[0]) ]
@@ -167,7 +167,7 @@ class Label(Node):
             text='', font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), 
             margin=(0, 0, 0, 0), center=False):
 
-        Node.__init__(self, parent, style)
+        super(Label, self).__init__(parent, style)
         self.text = text
         self.font = font
         self.color = color
@@ -212,7 +212,8 @@ class Label(Node):
 class Selections(Node):
     def __init__(self, parent, style, 
             labels, font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), curser=None):
-        Node.__init__(self, parent, style)
+
+        super(Selections, self).__init__(parent, style)
 
         self.labels = labels
         self.font = font
@@ -275,7 +276,7 @@ class Selections(Node):
 
 class MessageBox(Node):
     def __init__(self, parent, style, opt):
-        Node.__init__(self, parent, style)
+        super(MessageBox, self).__init__(parent, style)
         self.showing = False
 
     def __draw_box(self, cr, box_width, box_height, alpha):

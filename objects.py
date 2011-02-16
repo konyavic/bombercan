@@ -13,9 +13,6 @@ import cairo
 from pnode import *
 
 class Bomb(Node):
-    def __init__(self, parent, style):
-        Node.__init__(self, parent, style)
-
     def __draw(self, cr):
         s_width = self.width
         s_height = self.height
@@ -237,7 +234,7 @@ class Bishi(Node):
 
 class Floor(Node):
     def __init__(self, parent, style):
-        Node.__init__(self, parent, style)
+        super(Floor, self).__init__(parent, style)
         self.color = (0.5, 0.5, 1, 0.7)
 
     def __draw_simple_pattern(self, cr, color):

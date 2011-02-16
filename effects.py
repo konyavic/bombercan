@@ -45,75 +45,67 @@ class ExplosionEffect(Node):
 
 
 class Particle(object):
-    __slots__ = ('size', 'v_size', 'position', 'velocity', 'color', 'v_color', 'lifetime')
-
-def restrict(e):
-    if e <= 0.0: 
-        return 0.0
-    elif e >= 1.0: 
-        return 1.0
-    else: 
-        return e
+    __slots__ = ('size', 'v_size', 'position', 'velocity', 'accel', 'color', 'v_color', 'lifetime')
 
 class ParticleEffect(Node):
     def __init__(self, parent, style, 
             size, color, v_color, center, velocity, velocity_deviation, lifetime,
-            v_size=0, v_size_deviation=0, size_deviation=0, center_deviation=(0, 0), 
-            color_deviation=(0, 0, 0, 0), v_color_deviation=(0, 0, 0, 0),
-            lifetime_deviation=0, max_amount=0, initial_amount=0, spawn_interval=0.0):
+            v_size=0, size_deviation=0, accel=(0, 0),
+            max_amount=0, initial_amount=0, spawn_interval=0.0):
 
         Node.__init__(self, parent, style)
         # color
         self.color = color
         self.v_color = v_color
-        self.color_deviation = color_deviation
-        self.v_color_deviation = v_color_deviation
         # position (change upon resize)
         self.size = size
         self.size_deviation = size_deviation
         self.v_size = v_size
-        self.v_size_deviation = v_size_deviation
         self.center = center
-        self.center_deviation = center_deviation
         self.velocity = velocity
         self.velocity_deviation = velocity_deviation
+        self.accel = accel
         self.orig_width = float(self.width)
         self.orig_height = float(self.height)
-        # lifetime
-        self.lifetime = lifetime
-        self.lifetime_deviation = lifetime_deviation
         # other
+        self.lifetime = lifetime
         self.max_amount = max_amount
         self.spawn_interval = spawn_interval
+
         self.time_elapsed = 0.0
-        self.fadeout = False
         self.particles = []
         for i in xrange(0, initial_amount):
             self.spawn()
 
     def spawn(self):
-        def deviated(e):
+        def _deviated(e):
             return e[0] + e[1] * (random() - 0.5)
 
         p = Particle()
-        p.size = deviated((self.size, self.size_deviation))
-        p.v_size = deviated((self.v_size, self.v_size_deviation))
-        p.lifetime = deviated((self.lifetime, self.lifetime_deviation))
-        p.position = map(deviated, zip(self.center, self.center_deviation))
-        p.velocity = map(deviated, zip(self.velocity, self.velocity_deviation))
-        p.color = map(lambda e: restrict(deviated(e)), zip(self.color, self.color_deviation))
-        p.v_color = map(deviated, zip(self.v_color, self.v_color_deviation))
+        p.size = _deviated((self.size, self.size_deviation))
+        p.v_size = self.v_size
+        p.lifetime = self.lifetime
+        p.position = self.center
+        p.velocity = map(_deviated, zip(self.velocity, self.velocity_deviation))
+        p.accel = self.accel
+        p.color = self.color
+        p.v_color = self.v_color
         self.particles.append(p)
 
-    def on_tick(self, interval):
+    @staticmethod
+    def update_action(self, interval, phase):
         def update_value(e):
             return e[0] + e[1] * e[2]
+
+        def restrict(e):
+            return 0.0 if e <= 0.0 else 1.0 if e >= 1.0 else e
 
         particles = list(self.particles)
         interval2 = (interval, ) * 2
         interval4 = (interval, ) * 4
         for p in particles:
             p.position = map(update_value, zip(p.position, p.velocity, interval2))
+            p.velocity = map(update_value, zip(p.velocity, p.accel, interval2))
             p.color = map(update_value, zip(p.color, p.v_color, interval4))
             p.color = map(restrict, p.color)
             p.size += p.v_size * interval
@@ -123,23 +115,20 @@ class ParticleEffect(Node):
 
         # spawn new particle
         self.time_elapsed += interval
-        if (self.time_elapsed > self.spawn_interval and not self.fadeout
+        if (self.time_elapsed > self.spawn_interval
                 and (self.max_amount == 0 or len(self.particles) <= self.max_amount)):
 
             self.time_elapsed = 0.0
             self.spawn()
 
-    @animation
-    def play(self, cr, phase):
-        rect = (self.width, self.height)
+    def on_update(self, cr):
+        w, h = self.width, self.height
+        factor = w / self.orig_width
         for p in self.particles:
-            x = p.position[0] * rect[0]
-            y = p.position[1] * rect[1]
-            size = p.size * self.width / self.orig_width
+            x = p.position[0] * w
+            y = p.position[1] * h
+            # XXX: how to resize it?
+            size = p.size * factor
             cr.set_source_rgba(*p.color)
             cr.arc(x, y, size, 0, 2 * pi)
             cr.fill()
-
-    def stop(self, timeout):
-        self.fadeout = True
-        self.play(name='fadeout', period=timeout, loop=False)

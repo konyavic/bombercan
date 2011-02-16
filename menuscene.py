@@ -32,6 +32,7 @@ class MenuScene(Node):
                     },
                 font='MS Gothic',
                 labels=(u'Press Space', u'test', u'test2'),
+                color=(1, 1, 1, 0.7),
                 bgcolor=(0.3, 0.3, 0.7, 0.7),
                 curser=self.curser
                 )
@@ -52,22 +53,17 @@ class MenuScene(Node):
                 )
         self.add_node(title)
 
+        """
         particle = ParticleEffect(self, 
                 {'width': '50%', 'height': '50%', 'align': 'center', 'vertical-align': 'bottom'},
-                #size=10, size_deviation=1, v_size=3, v_size_deviation=2, 
-                size=10, size_deviation=2, v_size=3, v_size_deviation=0, 
-                #size=10, size_deviation=0, v_size=3, v_size_deviation=0, 
-                #color=(0.8, 0.4, 0, 0.5), color_deviation=(0.2, 0.2, 0, 0.2), v_color=(-0.5, -0.5, 0, -0.25), 
-                color=(0.8, 0.4, 0, 0.5), color_deviation=(0, 0, 0, 0), v_color=(-0.5, -0.5, 0, -0.25), 
-                #center=(0.5, 0.8), center_deviation=(0.02, 0.02),
-                center=(0.5, 0.8), center_deviation=(0, 0),
-                velocity=(0, -0.3), velocity_deviation=(0.2, 0.1), 
-                #velocity=(0, -0.1), velocity_deviation=(0.2, 0.3), 
-                #velocity=(0, -0.5), velocity_deviation=(0.2, 0.2), 
+                size=10, size_deviation=2, v_size=3,
+                color=(0.8, 0.4, 0, 0.5), v_color=(-0.5, -0.5, 0, -0.25), 
+                center=(0.5, 0.8),
+                velocity=(0, -0.3), velocity_deviation=(0.2, 0.1),
                 lifetime=2.0, initial_amount=100)
         self.add_node(particle)
-        particle.set_alpha(0.8)
-        particle.play(duration=1, loop=True)
+        particle.add_action('action', particle.update_action, duration=1, loop=True, update=True)
+        """
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png('menu_bg.png')

@@ -69,7 +69,7 @@ class StageScene(Node):
                     'height': cell_size * 2, 
                     'z-index': layers['object'] }
                 )
-        # player(blocking(obj))
+        player(obj)
         make_character(self, obj, 
                 on_move=lambda dir: obj.play_moving(duration=0.2, loop=True),
                 on_stop=lambda dir: obj.reset_animations()) # XXX
@@ -91,7 +91,7 @@ class StageScene(Node):
                     'height': cell_size, 
                     'z-index': layers['object'] }
                 )
-        enemy(blocking(obj))
+        enemy(obj)
         make_character(self, obj, speed=3.0, 
                 on_move=lambda dir: obj.rotate(duration=2, loop=True),
                 on_stop=lambda dir: obj.reset_animations())
@@ -123,7 +123,7 @@ class StageScene(Node):
                     'height': cell_size * 2, 
                     'z-index': layers['object'] }
                 )
-        fireblocking(blocking(obj))
+        fireblocking(block(obj))
         self.map.add_node(obj, x, y, 0, -cell_size)
 
     def create_hard_blocks(self):
@@ -140,7 +140,7 @@ class StageScene(Node):
                     'height': cell_size * 2, 
                     'z-index': layers['object'] }
                 )
-        blocking(obj)
+        block(obj)
         make_breakable(self, obj)
         self.map.add_node(obj, x, y, 0, -cell_size)
 
@@ -251,8 +251,12 @@ class StageScene(Node):
         """
         if (0 <= x and x < self.map_size[0]
                 and 0 <= y and y < self.map_size[1]):
-            for n in self.map.get_cell_nodes(x, y):
-                if is_blocking(n):
+            for target in self.map.get_cell_nodes(x, y):
+                if is_block(target):
+                    return True
+                elif is_player(node) and is_player(target):
+                    return True
+                elif is_enemy(node) and is_enemy(target):
                     return True
 
             return False
@@ -317,7 +321,7 @@ class StageScene(Node):
                 on_die=lambda: self.explode(bomb, x, y, power))
         make_bomb(bomb, delay, power,
                 on_explode=lambda: self.explode(bomb, x, y, power))
-        blocking(bomb)
+        block(bomb)
         bomb.count()
         self.map.add_node(bomb, x, y)
 

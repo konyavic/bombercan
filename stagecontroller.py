@@ -4,10 +4,10 @@
 from new import instancemethod
 from random import random
 
-MOVE_BLOCKING   = 1 << 0
-FIRE_BLOCKING   = 1 << 1
-BREAKABLE       = 1 << 2
-CHARACTER       = 1 << 3
+BLOCK           = 1 << 0
+CHARACTER       = 1 << 1
+FIRE_BLOCKING   = 1 << 2
+BREAKABLE       = 1 << 3
 ENEMY           = 1 << 4
 PLAYER          = 1 << 5
 BOMB            = 1 << 6
@@ -28,29 +28,15 @@ def stageobj_has_flag(flag, node):
         node.stageobj_flags = 0
         return False
 
-def blocking(node):
-    return stageobj(MOVE_BLOCKING, node)
-
-def is_blocking(node):
-    return stageobj_has_flag(MOVE_BLOCKING, node)
+#
+# fireblocking / breakable
+#
 
 def fireblocking(node):
     return stageobj(FIRE_BLOCKING, node)
 
 def is_fireblocking(node):
     return stageobj_has_flag(FIRE_BLOCKING, node)
-
-def player(node):
-    return stageobj(PLAYER, node)
-
-def is_player(node):
-    return stageobj_has_flag(PLAYER, node)
-
-def enemy(node):
-    return stageobj(ENEMY, node)
-
-def is_enemy(node):
-    return stageobj_has_flag(ENEMY, node)
 
 def is_breakable(node):
     return stageobj_has_flag(BREAKABLE, node)
@@ -64,6 +50,32 @@ def make_breakable(stage, node, on_die=None):
 
     node.die = instancemethod(die, node)
     return node
+
+#
+# player / enemy
+#
+
+def player(node):
+    return stageobj(PLAYER, node)
+
+def is_player(node):
+    return stageobj_has_flag(PLAYER, node)
+
+def enemy(node):
+    return stageobj(ENEMY, node)
+
+def is_enemy(node):
+    return stageobj_has_flag(ENEMY, node)
+
+#
+# block / character
+#
+
+def block(node):
+    return stageobj(BLOCK, node)
+
+def is_block(node):
+    return stageobj_has_flag(BLOCK, node)
 
 def is_character(node):
     return stageobj_has_flag(CHARACTER, node)

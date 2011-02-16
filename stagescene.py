@@ -15,11 +15,14 @@ from effects import *
 from uicomponents import *
 from stagecontroller import *
 
-# z-index table
+# The z-index table
 layers = {
         'floor': -100,
         'object': -300
         }
+
+# Fire will exist for # seconds
+FIRE_LASTING=1.5
 
 class StageScene(Node):
     def create_map(self):
@@ -80,9 +83,6 @@ class StageScene(Node):
         return obj
 
     def create_enemy_at(self, x, y):
-        def _dec_enemy_count():
-            self.enemy_count -= 1
-
         cell_size = self.map.get_cell_size()
         obj = Bishi(
                 parent=self.map,
@@ -96,14 +96,14 @@ class StageScene(Node):
                 on_move=lambda dir: obj.rotate(duration=2, loop=True),
                 on_stop=lambda dir: obj.reset_animations())
         make_breakable(self, obj,
-                on_die=_dec_enemy_count)
+                on_die=lambda: self.enemies.remove(obj))
         make_simpleai(self, obj)
         self.map.add_node(obj, x, y, 0, 0)
         return obj
 
 
     def create_enemies(self, count):
-        self.enemy_count = count
+        self.enemies = []
 
         while count > 0:
             x = int(random() * self.map_size[0])
@@ -111,7 +111,8 @@ class StageScene(Node):
             if self.is_filled(x, y):
                 continue
 
-            self.create_enemy_at(x, y)
+            enemy = self.create_enemy_at(x, y)
+            self.enemies.append(enemy)
             count -= 1
 
     def create_hard_block_at(self, x, y):
@@ -171,7 +172,7 @@ class StageScene(Node):
         self.create_enemies(10)
         self.create_soft_blocks(25)        
 
-        self.__mark_destroy = set()
+        self._mark_destroy = set()
 
         self.box = MessageBox(
                 parent=self, 
@@ -222,54 +223,65 @@ class StageScene(Node):
 
         if self.key_up('z'): self.player.bomb()
 
-        # actual destroy of marked nodes
-        for n in self.__mark_destroy:
+        # Real destroy of marked nodes
+        for n in self._mark_destroy:
             n.die()
 
-        self.__mark_destroy = set()
+        self._mark_destroy = set()
 
-        # lose condition
+        # Check the losing condition
         cell = self.map.get_cell(self.player)
         for n in self.map.get_cell_nodes(*cell):
             if is_enemy(n):
                 self.game_reset()
-
-        # win condition
-        if self.enemy_count == 0:
+            elif is_fire(n):
                 self.game_reset()
 
+        # Check enemies
+        for e in self.enemies:
+            cell = self.map.get_cell(e)
+            for n in self.map.get_cell_nodes(*cell):
+                if is_fire(n):
+                    e.die()
+                    break
+
+        # Check the winning condition
+        if len(self.enemies) == 0:
+            self.game_reset()
+
     def is_filled(self, x, y):
-        if (0 <= x and x < self.map_size[0]
+        if not (0 <= x and x < self.map_size[0]
                 and 0 <= y and y < self.map_size[1]):
-            return (len(self.map.get_cell_nodes(x, y)) > 1)
-        else:
             return False
+
+        # Is there something else than Floor?
+        return (len(self.map.get_cell_nodes(x, y)) > 1)
 
     def is_blocked(self, node, x, y):
-        """Check whether the target cell is blocked, \
+        """Check whether the target cell is blocked,
         according to the character who is moving.
         """
-        if (0 <= x and x < self.map_size[0]
+        # Out of the map
+        if not (0 <= x and x < self.map_size[0]
                 and 0 <= y and y < self.map_size[1]):
-            for target in self.map.get_cell_nodes(x, y):
-                if is_block(target):
-                    return True
-                elif is_player(node) and is_player(target):
-                    return True
-                elif is_enemy(node) and is_enemy(target):
-                    return True
-
-            return False
-
-        else:
             return True
 
+        # Check individual nodes in the cell
+        for target in self.map.get_cell_nodes(x, y):
+            if is_block(target):
+                return True
+            elif is_player(node) and is_player(target):
+                return True
+            elif is_enemy(node) and is_enemy(target):
+                return True
+
+        return False
+
     def move_object(self, node, dx, dy):
-        """Check the target cell whether it is blocking or not, \
-        and move the object in the map.  \
-        Some adjustion is applied to make the turning smooth.
+        """Check the target cell whether it is blocked or not,
+        and move the object in the map.
+        Some adjustion is applied to make the turning smoother.
         """
-        # XXX: refactor
         if dx == 0 and dy == 0:
             return
 
@@ -308,7 +320,7 @@ class StageScene(Node):
 
         map.move_pos(node, dx, dy)
 
-    def place_bomb(self, x, y, delay, power):
+    def put_bomb(self, x, y, delay, power):
         cell_size = self.map.get_cell_size()
         bomb = Bomb(
                 parent=self.map,
@@ -317,11 +329,11 @@ class StageScene(Node):
                     'height': cell_size,
                     'z-index': layers['object'] }
                 )
+        block(bomb)
         make_breakable(self, bomb, 
                 on_die=lambda: self.explode(bomb, x, y, power))
         make_bomb(bomb, delay, power,
                 on_explode=lambda: self.explode(bomb, x, y, power))
-        block(bomb)
         bomb.count()
         self.map.add_node(bomb, x, y)
 
@@ -329,55 +341,85 @@ class StageScene(Node):
         # XXX: refactor
         cell_size = self.map.get_cell_size()
 
-        def search_and_break(nodes):
+        # 1) Calculate the path of fire and destroy things on it
+
+        def _search_and_break(nodes):
             for n in nodes:
                 if is_fireblocking(n):
                     return (True, -1)
                 elif is_bomb(n):
+                    # Method die() first removes the node from the map, 
+                    # so it won't be an endless recursion.
                     n.die()
                 elif is_character(n):
                     n.die()
                 elif is_breakable(n):
-                    self.__mark_destroy.add(n)
+                    self._mark_destroy.add(n)
                     return (True, 0)
 
             return (False, 0)
 
-        tmp_x, end = x, (False, 0)
+        def _put_fire(x, y):
+            """Put an invisible fire object to target cell.
+            This fire object may destroy characters coming in.
+            """
+            _fire = Node(self.map, {'width': 1, 'height': 1})
+            fire(_fire)
+            self.map.add_node(_fire, x, y)
+            def _die_latter(node, interval, phase):
+                pass
+
+            _fire.add_action('die', _die_latter, delay=FIRE_LASTING, 
+                    cleanup=lambda: self.map.remove_node(_fire))
+
+        tmp_x, adjust = x, 0
         for tmp_x in xrange(x, max(x - power - 1, -1), -1):
             nodes = self.map.get_cell_nodes(tmp_x, y)
-            end = search_and_break(nodes)
-            if end[0]: break
+            stopped, adjust = _search_and_break(nodes)
+            if stopped: 
+                break
+            else:
+                _put_fire(tmp_x, y)
 
-        left = x - tmp_x + end[1]
+        fire_left = x - tmp_x + adjust
 
-        tmp_x, end = x, (False, 0)
+        tmp_x, adjust = x, 0
         for tmp_x in xrange(x, min(x + power + 1, self.map_size[0])):
             nodes = self.map.get_cell_nodes(tmp_x, y)
-            end = search_and_break(nodes)
-            if end[0]: break
+            stopped, adjust = _search_and_break(nodes)
+            if stopped: 
+                break
+            else:
+                _put_fire(tmp_x, y)
 
-        right = tmp_x - x + end[1]
+        fire_right = tmp_x - x + adjust
 
-        tmp_y, end = y, (False, 0)
+        tmp_y, adjust = y, 0
         for tmp_y in xrange(y, max(y - power - 1, -1), -1):
             nodes = self.map.get_cell_nodes(x, tmp_y)
-            end = search_and_break(nodes)
-            if end[0]: break
+            stopped, adjust = _search_and_break(nodes)
+            if stopped: 
+                break
+            else:
+                _put_fire(x, tmp_y)
 
-        up = y - tmp_y + end[1]
+        fire_up = y - tmp_y + adjust
 
-        tmp_y, end = y, (False, 0)
+        tmp_y, adjust = y, 0
         for tmp_y in xrange(y, min(y + power + 1, self.map_size[1])):
             nodes = self.map.get_cell_nodes(x, tmp_y)
-            end = search_and_break(nodes)
-            if end[0]: break
+            stopped, adjust = _search_and_break(nodes)
+            if stopped: 
+                break
+            else:
+                _put_fire(x, tmp_y)
 
-        down = tmp_y - y + end[1]
+        fire_down = tmp_y - y + adjust
                 
-        # show effect
-        width = (left + right + 1) * cell_size
-        height = (up + down + 1) * cell_size
+        # 2) Show the effect
+
+        width = (fire_left + fire_right + 1) * cell_size
+        height = (fire_up + fire_down + 1) * cell_size
         explosion = ExplosionEffect(
                 parent=self.map,
                 style={
@@ -385,11 +427,11 @@ class StageScene(Node):
                     'height': height,
                     'z-index': layers['object'] },
                 opt={
-                    '$arms': (up, right, down, left),
+                    '$arms': (fire_up, fire_right, fire_down, fire_left),
                     '?cell size': lambda: self.map.get_cell_size(),
                     '@destroy': lambda: self.map.remove_node(explosion) }
                 )
-        self.map.add_node(explosion, x, y, -left * cell_size, -up * cell_size)
+        self.map.add_node(explosion, x, y, -fire_left * cell_size, -fire_up * cell_size)
 
         """
         particle = ParticleEffect(self, 

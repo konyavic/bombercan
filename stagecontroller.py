@@ -142,7 +142,7 @@ def make_bomber(stage, node,
     node.bomb_count = bomb_count
 
     def bomb(self):
-        stage.place_bomb(*stage.map.get_cell(self), 
+        stage.put_bomb(*stage.map.get_cell(self), 
                 delay=self.bomb_delay, power=self.bomb_power)
 
         if on_bomb: on_bomb()
@@ -150,7 +150,7 @@ def make_bomber(stage, node,
     node.bomb = instancemethod(bomb, node)
     return node
 
-def make_simpleai(stage, node, timeout=3.0):
+def make_simpleai(stage, node, timeout=1.0):
     node.ai_timecount=timeout * random()
     node.ai_old_pos = (node.x, node.y)
 
@@ -188,6 +188,10 @@ def make_trackingfloor(stage, node, x, y, on_enter, on_leave):
     node.on_tick = instancemethod(on_tick, node)
     return node
 
+#
+# fire and bomb
+#
+
 def is_bomb(node):
     return stageobj_has_flag(BOMB, node)
 
@@ -204,3 +208,9 @@ def make_bomb(node, delay, power, on_explode):
 
     node.on_tick = instancemethod(on_tick, node)
     return node
+
+def is_fire(node):
+    return stageobj_has_flag(FIRE, node)
+
+def fire(node):
+    return stageobj(FIRE, node)

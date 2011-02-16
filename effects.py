@@ -41,7 +41,7 @@ class ExplosionEffect(Node):
             cr.set_source_rgba(1, 1, 0, 0.5)
             cr.fill()
 
-        self.set_animation(animation, duration=1, cleanup=self.do_destroy)
+        self.set_animation(animation, duration=1.5, cleanup=self.do_destroy)
 
 
 class Particle(object):

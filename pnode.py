@@ -438,7 +438,8 @@ class Node(object):
 class Game(object):
     def __init__(self, title, width, height, fps):
         self.title = title
-        self.screen_size = [width, height]
+        self.width = width
+        self.height = height
         self.timer_interval = int(1000.0/fps)
 
         self.top_node = None
@@ -446,9 +447,6 @@ class Game(object):
         self.__quit = False
         self.__keymap = set()
         self.__next_keymap = set()
-
-        self.width = width
-        self.height = height
 
     def quit(self):
         self.__quit = True
@@ -462,9 +460,6 @@ class Game(object):
         return (key in self.__keymap) and not (key in self.__next_keymap)
 
     def on_tick(self, interval):
-        """
-        extend this method to handle input and time events
-        """
         pass
         
     def do_expose(self, widget, event):
@@ -521,7 +516,7 @@ class Game(object):
         window.connect('destroy', gtk.main_quit)
         window.connect('key-press-event', self.do_key_press)
         window.connect('key-release-event', self.do_key_release)
-        window.set_default_size(*self.screen_size)
+        window.set_default_size(self.width, self.height)
         window.set_title(self.title)
 
         area = gtk.DrawingArea()

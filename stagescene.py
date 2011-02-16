@@ -91,9 +91,10 @@ class StageScene(Node):
                     'height': cell_size, 
                     'z-index': layers['object'] }
                 )
-        # enemy(fatal(blocking(obj)))
-        fatal(blocking(obj))
-        make_character(self, obj, speed=3.0)
+        enemy(blocking(obj))
+        make_character(self, obj, speed=3.0, 
+                on_move=lambda dir: obj.rotate(duration=2, loop=True),
+                on_stop=lambda dir: obj.reset_animations())
         make_breakable(self, obj,
                 on_die=_dec_enemy_count)
         make_simpleai(self, obj)
@@ -153,8 +154,10 @@ class StageScene(Node):
             self.create_soft_block_at(x, y)
             count -= 1
 
-    def __init__(self, parent, style, map_size, margin, key_up, key_down, on_game_reset):
-        Node.__init__(self, parent, style)
+    def __init__(self, parent, style, 
+            map_size, margin, key_up, key_down, on_game_reset):
+
+        super(StageScene, self).__init__(parent, style)
         self.map_size = map_size
         self.margin = margin
         self.key_up = key_up
@@ -205,28 +208,19 @@ class StageScene(Node):
         cr.paint_with_alpha(0.7)
 
     def on_tick(self, interval):
-        if self.key_up('Left'):
-            self.player.move('left')
-        elif self.key_up('Up'):
-            self.player.move('up')
-        elif self.key_up('Right'):
-            self.player.move('right')
-        elif self.key_up('Down'):
-            self.player.move('down')
-        elif self.key_down('Left'):
-            self.player.stop('left')
-        elif self.key_down('Up'):
-            self.player.stop('up')
-        elif self.key_down('Right'):
-            self.player.stop('right')
-        elif self.key_down('Down'):
-            self.player.stop('down')
+        if self.key_up('Left'): self.player.move('left')
+        if self.key_up('Up'): self.player.move('up')
+        if self.key_up('Right'): self.player.move('right')
+        if self.key_up('Down'): self.player.move('down')
 
-        if self.key_up('space'):
-            self.box.toggle()
+        if self.key_down('Left'): self.player.stop('left')
+        if self.key_down('Up'): self.player.stop('up')
+        if self.key_down('Right'): self.player.stop('right')
+        if self.key_down('Down'): self.player.stop('down')
 
-        if self.key_up('z'):
-            self.player.bomb()
+        if self.key_up('space'): self.box.toggle()
+
+        if self.key_up('z'): self.player.bomb()
 
         # actual destroy of marked nodes
         for n in self.__mark_destroy:
@@ -237,7 +231,7 @@ class StageScene(Node):
         # lose condition
         cell = self.map.get_cell(self.player)
         for n in self.map.get_cell_nodes(*cell):
-            if is_fatal(n):
+            if is_enemy(n):
                 self.game_reset()
 
         # win condition
@@ -252,40 +246,61 @@ class StageScene(Node):
             return False
 
     def is_blocked(self, node, x, y):
+        """Check whether the target cell is blocked, \
+        according to the character who is moving.
+        """
         if (0 <= x and x < self.map_size[0]
                 and 0 <= y and y < self.map_size[1]):
             for n in self.map.get_cell_nodes(x, y):
-                if is_player(node) and is_fatal(n):
-                    return False
-                elif is_blocking(n):
+                if is_blocking(n):
                     return True
 
             return False
 
         else:
-            return False
+            return True
 
     def move_object(self, node, dx, dy):
+        """Check the target cell whether it is blocking or not, \
+        and move the object in the map.  \
+        Some adjustion is applied to make the turning smooth.
+        """
         # XXX: refactor
+        if dx == 0 and dy == 0:
+            return
+
         map = self.map
         cell = map.get_cell(node)
         pos = map.get_node_pos(node)
+        current_cell_pos = map.get_cell_pos(*cell)
         cell_size = map.get_cell_size()
         is_blocked = self.is_blocked
+        current_cell_delta_x = current_cell_pos[0] - pos[0]
+        current_cell_delta_y = current_cell_pos[1] - pos[1]
+        blocked_x = False
+        blocked_y = False
 
+        # Detect and handle collision
         if dx > 0 and is_blocked(node, cell[0] + 1, cell[1]):
-            dx = min(map.get_cell_pos(*cell)[0] - pos[0], dx)
+            dx = min(current_cell_delta_x, dx)
+            blocked_x = True
         elif dx < 0 and is_blocked(node, cell[0] - 1, cell[1]):
-            dx = max(map.get_cell_pos(*cell)[0] - pos[0], dx)
-        elif dx == 0:
-            dx = map.get_cell_pos(*cell)[0] - pos[0]
+            dx = max(current_cell_delta_x, dx)
+            blocked_x = True
         
         if dy > 0 and is_blocked(node, cell[0], cell[1] + 1):
-            dy = min(map.get_cell_pos(*cell)[1] - pos[1], dy)
+            dy = min(current_cell_delta_y, dy)
+            blocked_y = True
         elif dy < 0 and is_blocked(node, cell[0], cell[1] - 1):
-            dy = max(map.get_cell_pos(*cell)[1] - pos[1], dy)
-        elif dy == 0:
-            dy = map.get_cell_pos(*cell)[1] - pos[1]
+            dy = max(current_cell_delta_y, dy)
+            blocked_y = True
+
+        # Smooth if needed
+        if dx == 0 and not blocked_y:
+            dx = current_cell_delta_x
+
+        if dy == 0 and not blocked_x:
+            dy = current_cell_delta_y
 
         map.move_pos(node, dx, dy)
 
@@ -372,6 +387,7 @@ class StageScene(Node):
                 )
         self.map.add_node(explosion, x, y, -left * cell_size, -up * cell_size)
 
+        """
         particle = ParticleEffect(self, 
                 {'width': cell_size, 'height': cell_size * up, 'z-index': layers['object']},
                 size=(cell_size * 0.5), size_deviation=(0.1 * cell_size), 
@@ -381,3 +397,4 @@ class StageScene(Node):
                 velocity=(0, -1.0), velocity_deviation=(0.0, 0.2), lifetime=1.0)
         self.map.add_node(particle, x, y, 0, -up * cell_size)
         particle.play(duration=3, cleanup=lambda: self.map.remove_node(particle))
+        """

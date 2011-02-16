@@ -260,6 +260,7 @@ class Selections(Node):
             'height': self._labels[i].height,
             })
 
+        # XXX: merge into motions
         def _shake(self, interval, phase):
             a = (pi / 8) * (1.0 - phase)
             self.set_rotate(a * sin(phase * 8 * 2 * pi))

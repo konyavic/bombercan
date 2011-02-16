@@ -6,12 +6,12 @@ from random import random
 
 MOVE_BLOCKING   = 1 << 0
 FIRE_BLOCKING   = 1 << 1
-FATAL           = 1 << 2
-BREAKABLE       = 1 << 3
-CHARACTER       = 1 << 4
-ENEMY           = 1 << 5
-PLAYER          = 1 << 6
-BOMB            = 1 << 7
+BREAKABLE       = 1 << 2
+CHARACTER       = 1 << 3
+ENEMY           = 1 << 4
+PLAYER          = 1 << 5
+BOMB            = 1 << 6
+FIRE            = 1 << 7
 
 def stageobj(flag, node):
     try:
@@ -39,12 +39,6 @@ def fireblocking(node):
 
 def is_fireblocking(node):
     return stageobj_has_flag(FIRE_BLOCKING, node)
-
-def fatal(node):
-    return stageobj(FATAL, node)
-
-def is_fatal(node):
-    return stageobj_has_flag(FATAL, node)
 
 def player(node):
     return stageobj(PLAYER, node)

@@ -11,8 +11,13 @@ import gobject
 import cairo
 
 from pnode import *
+from motions import *
 
 class Bomb(Node):
+    def __init__(self, parent, style):
+        super(Bomb, self).__init__(parent, style)
+        use_basic_motions(self)
+
     def __draw(self, cr):
         s_width = self.width
         s_height = self.height
@@ -41,13 +46,9 @@ class Bomb(Node):
     def on_update(self, cr):
         self.__draw(cr)
 
-    # XXX: move to 'motions'
     def count(self):
-        def _count(self, interval, phase):
-            s = 1.25 - 0.25 * cos(phase * pi * 2)
-            self.set_scale(s, s, (0.5, 0.8))
-
-        self.add_action('count', _count, duration=1.5, loop=True, update=True)
+        self.scale(end_scale=(1.5, 1.5), duration=1.5, 
+                rel_origin=(0.5, 0.8), harmonic=True, loop=True)
 
 class HardBlock(Node):
     def on_update(self, cr):
@@ -221,6 +222,10 @@ class Can(Node):
         cr.restore()
 
 class Bishi(Node):
+    def __init__(self, parent, style):
+        super(Bishi, self).__init__(parent, style)
+        use_basic_motions(self)
+
     def on_update(self, cr):
         cr.move_to(self.width / 2, 0)
         cr.line_to(self.width, self.height / 2)

@@ -5,7 +5,7 @@ from math import pi
 from math import cos
 from new import instancemethod
 
-def use_scale_rotation(node):
+def use_basic_motions(node):
     def scale(self, end_scale, duration, 
             start_scale=(1.0, 1.0), rel_origin=(0.5, 0.5), harmonic=False, 
             delay=0.0, loop=False, cleanup=None):
@@ -35,3 +35,17 @@ def use_scale_rotation(node):
                     duration, delay, True, loop, cleanup)
 
     node.scale = instancemethod(scale, node)
+
+    def rotate(self, duration, 
+            end_ang=(2 * pi), start_ang=0, rel_origin=(0.5, 0.5),
+            delay=0.0, loop=False, cleanup=None):
+
+        delta = end_ang - start_ang
+
+        def _rotate(self, interval, phase):
+            self.set_rotate(start_ang + delta * phase)
+
+        self.add_action('rotate', _rotate, 
+                duration, delay, True, loop, cleanup)
+
+    node.rotate = instancemethod(rotate, node)

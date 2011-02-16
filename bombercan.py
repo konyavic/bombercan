@@ -28,7 +28,6 @@ class Bombercan(Game):
                     on_game_reset=game_reset
                     )
 
-
         self.menu = MenuScene(
                 parent=self,
                 style={},

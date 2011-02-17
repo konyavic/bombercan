@@ -12,18 +12,18 @@ import cairo
 from pnode import *
 
 class ExplosionEffect(Node):
-    def __init__(self, parent, style, opt):
+    def __init__(self, parent, style, fire, get_cell_size, on_die):
         super(ExplosionEffect, self).__init__(parent, style)
-        self.arms = opt['$arms']
-        self.get_cell_size = opt['?cell size']
-        self.do_destroy = opt['@destroy']
+        self.fire = fire
+        self.get_cell_size = get_cell_size
+        self.on_die = on_die
 
         def animation(self, cr, phase):
             cell_size = self.get_cell_size()
-            left = self.arms[3] * cell_size
-            up = self.arms[0] * cell_size
-            right = self.arms[1] * cell_size
-            down = self.arms[2] * cell_size
+            left = self.fire[3] * cell_size
+            up = self.fire[0] * cell_size
+            right = self.fire[1] * cell_size
+            down = self.fire[2] * cell_size
 
             cr.move_to(left, up)
             cr.rel_line_to(0, -up)
@@ -41,7 +41,7 @@ class ExplosionEffect(Node):
             cr.set_source_rgba(1, 1, 0, 0.5)
             cr.fill()
 
-        self.set_animation(animation, duration=1.5, cleanup=self.do_destroy)
+        self.set_animation(animation, duration=1.5, cleanup=self.on_die)
 
 
 class Particle(object):

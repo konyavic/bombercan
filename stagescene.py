@@ -337,10 +337,17 @@ class StageScene(Node):
         self.map.add_node(bomb, x, y)
 
     def explode(self, node, x, y, power):
-        # XXX: refactor
+        """Do all the works when a bomb explode.
+
+        1) Calculate the path of fire
+        2) Destroy things on the path
+        3) Put 'fire object' to kill characters who entered the path later
+        4) Show the effect
+
+        """
         cell_size = self.map.get_cell_size()
 
-        # 1) Calculate the path of fire and destroy things on it
+        # Step 1-3
 
         def _search_and_break(nodes):
             for n in nodes:
@@ -415,9 +422,8 @@ class StageScene(Node):
 
         fire_down = tmp_y - y + adjust
                 
-        # 2) Show the effect
+        # Step 4
 
-        """
         width = (fire_left + fire_right + 1) * cell_size
         height = (fire_up + fire_down + 1) * cell_size
         explosion = ExplosionEffect(
@@ -426,56 +432,8 @@ class StageScene(Node):
                     'width': width,
                     'height': height,
                     'z-index': layers['object'] },
-                opt={
-                    '$arms': (fire_up, fire_right, fire_down, fire_left),
-                    '?cell size': lambda: self.map.get_cell_size(),
-                    '@destroy': lambda: self.map.remove_node(explosion) }
+                fire=(fire_up, fire_right, fire_down, fire_left),
+                get_cell_size=self.map.get_cell_size,
+                on_die=lambda: self.map.remove_node(explosion)
                 )
         self.map.add_node(explosion, x, y, -fire_left * cell_size, -fire_up * cell_size)
-        """
-
-        self.put_explosion_effect(x, y, (fire_up, fire_right, fire_down, fire_left), FIRE_LASTING)
-        """
-        particle = ParticleEffect(self, 
-                {'width': cell_size, 'height': cell_size * up, 'z-index': layers['object']},
-                size=(cell_size * 0.5), size_deviation=(0.1 * cell_size), 
-                v_size=(-0.2 * cell_size), v_size_deviation=(0.05 * cell_size),
-                color=(1.0, 0.8, 0.0, 0.2), color_deviation=(0.5, 0.5, 0.0, -0.05), v_color=(0, -0.2, 0, 0),
-                center=(0.5, 0.8), center_deviation=(0.2, 0.1),
-                velocity=(0, -1.0), velocity_deviation=(0.0, 0.2), lifetime=1.0)
-        self.map.add_node(particle, x, y, 0, -up * cell_size)
-        particle.play(duration=3, cleanup=lambda: self.map.remove_node(particle))
-        """
-
-    def put_explosion_effect(self, x, y, fire, duration):
-        cell_size = self.map.get_cell_size()
-
-        def _put_explosion_effect(sign, center, width, height, delta_width, delta_height):
-            particle = ParticleEffect(self.map, 
-                    {'width': width, 'height': height, 'z-index': layers['object']},
-                    size=10, size_deviation=2, v_size=3,
-                    color=(0.8, 0.4, 0, 0.5), v_color=(-0.5, -0.5, 0, -0.25), 
-                    center=center,
-                    velocity=(1 * sign[0], 1 * sign[1]), velocity_deviation=(0, 0),
-                    accel=(0.3 * sign[0], 0.3 * sign[1]),
-                    lifetime=2.0, initial_amount=100)
-            self.map.add_node(particle, x, y, delta_width, delta_height)
-            particle.add_action('action', particle.update_action, 
-                    duration=duration, update=True, 
-                    cleanup=lambda: self.map.remove_node(particle))
-
-        if fire[0] > 0:
-            h = fire[0] * cell_size
-            _put_explosion_effect((0, -1), (0.5, 1.0), cell_size, h, 0, -h)
-        
-        if fire[1] > 0:
-            w = fire[1] * cell_size
-            _put_explosion_effect((1, 0), (0.0, 0.5), w, cell_size, 0, 0)
-        
-        if fire[2] > 0:
-            h = fire[2] * cell_size
-            _put_explosion_effect((0, 1), (0.5, 0.0), cell_size, h, 0, 0)
-        
-        if fire[3] > 0:
-            w = fire[3] * cell_size
-            _put_explosion_effect((-1, 0), (1.0, 0.5), w, cell_size, -w, 0)

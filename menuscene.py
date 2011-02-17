@@ -53,7 +53,6 @@ class MenuScene(Node):
                 )
         self.add_node(title)
 
-        """
         particle = ParticleEffect(self, 
                 {'width': '50%', 'height': '50%', 'align': 'center', 'vertical-align': 'bottom'},
                 size=10, size_deviation=2, v_size=3,
@@ -63,7 +62,6 @@ class MenuScene(Node):
                 lifetime=2.0, initial_amount=100)
         self.add_node(particle)
         particle.add_action('action', particle.update_action, duration=1, loop=True, update=True)
-        """
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png('menu_bg.png')

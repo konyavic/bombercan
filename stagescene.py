@@ -106,6 +106,14 @@ class StageScene(Node):
                 on_die=lambda: self.enemies.remove(obj))
         make_simpleai(self, obj)
         self.map.add_node(obj, x, y, 0, 0)
+
+        # Create dummy objects to prevent enemies 
+        # from concentrating in one space
+        self.create_dummy_obj_at(x - 1, y)
+        self.create_dummy_obj_at(x + 1, y)
+        self.create_dummy_obj_at(x, y - 1)
+        self.create_dummy_obj_at(x, y + 1)
+
         return obj
 
 
@@ -162,6 +170,22 @@ class StageScene(Node):
             self.create_soft_block_at(x, y)
             count -= 1
 
+    def create_dummy_obj_at(self, x, y):
+        if not (0 <= x and x < self.map_size[0] and
+                0 <= y and y < self.map_size[1]):
+            return
+
+        obj = Node(parent=self.map, style={'width': 1, 'height': 1})
+        self.map.add_node(obj, x, y)
+        try:
+            self.dummies.append(obj)
+        except AttributeError:
+            self.dummies = [obj]
+
+    def clear_dummy_obj(self):
+        for d in self.dummies:
+            self.map.remove_node(d)
+
     def __init__(self, parent, style, 
             map_size, margin, key_up, key_down, on_game_reset):
 
@@ -172,15 +196,7 @@ class StageScene(Node):
         self.key_down = key_down
         self.game_reset = on_game_reset
 
-        self.create_map()
-        self.create_floor()
-        self.player = self.create_player_at(0, 0)
-        self.create_hard_blocks()        
-        self.create_enemies(10)
-        self.create_soft_blocks(25)        
-
-        self._mark_destroy = set()
-
+        """
         self.box = MessageBox(
                 parent=self, 
                 style={
@@ -191,9 +207,25 @@ class StageScene(Node):
                     'z-index': -500 },
                 opt=None)
         self.add_node(self.box)
+        """
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png('stage_bg.png')
+
+    def generate(self, n_enemies, n_blocks):
+        """Randomly generate a new stage.
+        """
+        self.create_map()
+        self.create_floor()
+        self.player = self.create_player_at(0, 0)
+        self.create_dummy_obj_at(0, 1)
+        self.create_dummy_obj_at(1, 0)
+        self.create_hard_blocks()        
+        self.create_enemies(n_enemies)
+        self.create_soft_blocks(n_blocks)        
+        self.clear_dummy_obj()
+
+        self._mark_destroy = set()
 
     def on_update(self, cr):
         scale_width = self.width / float(self.texture['bgimg'].get_width())
@@ -226,7 +258,7 @@ class StageScene(Node):
         if self.key_down('Right'): self.player.stop('right')
         if self.key_down('Down'): self.player.stop('down')
 
-        if self.key_up('space'): self.box.toggle()
+        #if self.key_up('space'): self.box.toggle()
 
         if self.key_up('z'): self.player.bomb()
 

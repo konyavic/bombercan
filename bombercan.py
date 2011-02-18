@@ -27,6 +27,7 @@ class Bombercan(Game):
                     key_down=self.key_down,
                     on_game_reset=game_reset
                     )
+            self.stage.generate(20, 60)
 
         self.menu = MenuScene(
                 parent=self,

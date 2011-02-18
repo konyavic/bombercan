@@ -17,7 +17,6 @@ class Bombercan(Game):
         def game_reset():
             self.top_node=self.menu
             self.top_node.do_resize_recursive()
-
             self.stage = StageScene(
                     parent=self,
                     style={},
@@ -26,7 +25,7 @@ class Bombercan(Game):
                     key_up=self.key_up,
                     key_down=self.key_down,
                     on_game_reset=game_reset
-                    )
+                )
             self.stage.generate(20, 60)
 
         self.menu = MenuScene(

@@ -17,7 +17,8 @@ from stagecontroller import *
 # The z-index table
 layers = {
         'floor': -100,
-        'object': -300
+        'object': -300,
+        'effect': -500
         }
 
 # Fire will exist for # seconds
@@ -185,6 +186,8 @@ class StageScene(Node):
     def clear_dummy_obj(self):
         for d in self.dummies:
             self.map.remove_node(d)
+
+        self.dummies = []
 
     def __init__(self, parent, style, 
             map_size, margin, key_up, key_down, on_game_reset):
@@ -472,7 +475,7 @@ class StageScene(Node):
                 style={
                     'width': width,
                     'height': height,
-                    'z-index': layers['object'] },
+                    'z-index': layers['effect'] },
                 fire=(fire_up, fire_right, fire_down, fire_left),
                 get_cell_size=self.map.get_cell_size,
                 on_die=lambda: self.map.remove_node(explosion)

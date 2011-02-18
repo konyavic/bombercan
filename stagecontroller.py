@@ -12,6 +12,7 @@ ENEMY           = 1 << 4
 PLAYER          = 1 << 5
 BOMB            = 1 << 6
 FIRE            = 1 << 7
+DEAD            = 1 << 8
 
 def stageobj(flag, node):
     try:
@@ -77,11 +78,17 @@ def block(node):
 def is_block(node):
     return stageobj_has_flag(BLOCK, node)
 
+def dead(node):
+    return stageobj(DEAD, node)
+
+def is_dead(node):
+    return stageobj_has_flag(DEAD, node)
+
 def is_character(node):
     return stageobj_has_flag(CHARACTER, node)
 
 def make_character(stage, node, 
-        speed=4.0, on_move=None, on_stop=None, on_die=None):
+        speed=4.0, on_move=None, on_stop=None, on_go_die=None):
 
     stageobj(CHARACTER, node)
     node.speed = speed
@@ -130,8 +137,16 @@ def make_character(stage, node,
                 on_stop('right')
                 on_stop('left')
 
+    def go_die(self):
+        dead(self)
+        if on_go_die:
+            on_go_die()
+        else:
+            self.die()
+
     node.move = instancemethod(move, node)
     node.stop = instancemethod(stop, node)
+    node.go_die = instancemethod(go_die, node)
     return node
 
 def make_bomber(stage, node,
@@ -153,8 +168,12 @@ def make_bomber(stage, node,
 def make_simpleai(stage, node, timeout=1.0):
     node.ai_timecount=timeout * random()
     node.ai_old_pos = (node.x, node.y)
+    node.is_ai_stopped = False
 
     def on_tick(self, interval):
+        if self.is_ai_stopped:
+            return
+
         self.ai_timecount += interval
         # XXX
         #if (self.ai_timecount < timeout
@@ -168,7 +187,11 @@ def make_simpleai(stage, node, timeout=1.0):
         self.stop()
         self.move(dir)
 
+    def stop_ai(self):
+        self.is_ai_stopped = True
+
     node.on_tick = instancemethod(on_tick, node)
+    node.stop_ai = instancemethod(stop_ai, node)
     return node
 
 def make_trackingfloor(stage, node, x, y, on_enter, on_leave):

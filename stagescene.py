@@ -91,10 +91,18 @@ class StageScene(Node):
                     'z-index': layers['object'] }
                 )
         enemy(obj)
+        def _on_go_die():
+            obj.stop_ai()
+            obj.reset_animations()
+            obj.reset_actions()
+            obj.reset_transforms()
+            obj.scale((0.5, 0.5), duration=2.0, cleanup=obj.die)
+
         make_character(self, obj, speed=3.0, 
                 on_move=lambda dir: obj.rotate(duration=2, loop=True),
-                on_stop=lambda dir: obj.reset_animations())
-        make_breakable(self, obj,
+                on_stop=lambda dir: obj.reset_animations(),
+                on_go_die=_on_go_die)
+        make_breakable(self, obj, 
                 on_die=lambda: self.enemies.remove(obj))
         make_simpleai(self, obj)
         self.map.add_node(obj, x, y, 0, 0)
@@ -240,8 +248,8 @@ class StageScene(Node):
         for e in self.enemies:
             cell = self.map.get_cell(e)
             for n in self.map.get_cell_nodes(*cell):
-                if is_fire(n):
-                    e.die()
+                if is_fire(n) and not is_dead(n):
+                    e.go_die()
                     break
 
         # Check the winning condition
@@ -361,10 +369,9 @@ class StageScene(Node):
                 elif is_bomb(n):
                     # Method die() first removes the node from the map, 
                     # so it won't be an endless recursion.
-                    # XXX: the original bomb enters twice?
                     n.die()
-                elif is_character(n):
-                    n.die()
+                elif is_character(n) and not is_dead(n):
+                    n.go_die()
                 elif is_breakable(n):
                     self._mark_destroy.add(n)
                     return (True, 0)

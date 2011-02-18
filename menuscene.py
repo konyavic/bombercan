@@ -31,7 +31,7 @@ class MenuScene(Node):
                     'height': '30%'
                     },
                 font='MS Gothic',
-                labels=(u'Press Space', u'test', u'test2'),
+                labels=(u'Story Mode', u'Free Game'),
                 color=(1, 1, 1, 0.7),
                 bgcolor=(0.3, 0.3, 0.7, 0.7),
                 curser=self.curser

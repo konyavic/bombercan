@@ -332,7 +332,7 @@ class StageScene(Node):
         make_breakable(self, bomb, 
                 on_die=lambda: self.explode(bomb, x, y, power))
         make_bomb(bomb, delay, power,
-                on_explode=lambda: self.explode(bomb, x, y, power))
+                on_explode=lambda: bomb.die())
         bomb.count()
         self.map.add_node(bomb, x, y)
 
@@ -350,12 +350,18 @@ class StageScene(Node):
         # Step 1-3
 
         def _search_and_break(nodes):
+            def _shake(self, interval, phase):
+                a = (pi / 8) * (1.0 - phase)
+                self.set_rotate(a * sin(phase * 8 * 2 * pi))
+
             for n in nodes:
+                n.add_action('shake', _shake, duration=2, update=True)
                 if is_fireblocking(n):
                     return (True, -1)
                 elif is_bomb(n):
                     # Method die() first removes the node from the map, 
                     # so it won't be an endless recursion.
+                    # XXX: the original bomb enters twice?
                     n.die()
                 elif is_character(n):
                     n.die()
@@ -382,10 +388,9 @@ class StageScene(Node):
         for tmp_x in xrange(x, max(x - power - 1, -1), -1):
             nodes = self.map.get_cell_nodes(tmp_x, y)
             stopped, adjust = _search_and_break(nodes)
+            _put_fire(tmp_x, y)
             if stopped: 
                 break
-            else:
-                _put_fire(tmp_x, y)
 
         fire_left = x - tmp_x + adjust
 
@@ -393,10 +398,9 @@ class StageScene(Node):
         for tmp_x in xrange(x, min(x + power + 1, self.map_size[0])):
             nodes = self.map.get_cell_nodes(tmp_x, y)
             stopped, adjust = _search_and_break(nodes)
+            _put_fire(tmp_x, y)
             if stopped: 
                 break
-            else:
-                _put_fire(tmp_x, y)
 
         fire_right = tmp_x - x + adjust
 
@@ -404,10 +408,9 @@ class StageScene(Node):
         for tmp_y in xrange(y, max(y - power - 1, -1), -1):
             nodes = self.map.get_cell_nodes(x, tmp_y)
             stopped, adjust = _search_and_break(nodes)
+            _put_fire(x, tmp_y)
             if stopped: 
                 break
-            else:
-                _put_fire(x, tmp_y)
 
         fire_up = y - tmp_y + adjust
 
@@ -415,10 +418,9 @@ class StageScene(Node):
         for tmp_y in xrange(y, min(y + power + 1, self.map_size[1])):
             nodes = self.map.get_cell_nodes(x, tmp_y)
             stopped, adjust = _search_and_break(nodes)
+            _put_fire(x, tmp_y)
             if stopped: 
                 break
-            else:
-                _put_fire(x, tmp_y)
 
         fire_down = tmp_y - y + adjust
                 
@@ -437,3 +439,7 @@ class StageScene(Node):
                 on_die=lambda: self.map.remove_node(explosion)
                 )
         self.map.add_node(explosion, x, y, -fire_left * cell_size, -fire_up * cell_size)
+        def _shake(self, interval, phase):
+            a = (pi / 8) * (1.0 - phase)
+            self.set_rotate(a * sin(phase * 8 * 2 * pi))
+        explosion.add_action('shake', _shake, duration=2, update=True)

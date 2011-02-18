@@ -245,7 +245,8 @@ class Floor(Node):
     def __draw_simple_pattern(self, cr, color):
         cr.set_line_width(2)
         cr.set_source_rgba(*color)
-        cr.paint()
+        cr.rectangle(0, 0, self.width, self.height)
+        cr.fill()
 
         cr.set_source_rgba(0.5, 0.5, 0.5, 0.7)
         cr.rectangle(0, 0, self.width, self.height)

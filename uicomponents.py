@@ -19,7 +19,8 @@ class MapContainer(Node):
         super(MapContainer, self).__init__(parent, style)
         self.map_size = map_size
 
-        self.__map = [[ [] for y in xrange(0, self.map_size[1]) ] for x in xrange(0, self.map_size[0]) ]
+        self.__map = [ [ [] for y in xrange(0, self.map_size[1]) ] 
+                for x in xrange(0, self.map_size[0]) ]
         self.__delta = {}
         self.__cell = {}
         self.__orig_size = {}
@@ -30,11 +31,10 @@ class MapContainer(Node):
         self.__orig_cell_size = self.__cell_size
     
     def __update_cell_size(self):
-        self.__cell_size = min(self.width / self.map_size[0], self.height / self.map_size[1])
-        self.__padding = (
-                (self.width - self.__cell_size * self.map_size[0]) / 2,
-                (self.height - self.__cell_size * self.map_size[1]) / 2
-                )
+        self.__cell_size = min(self.width / self.map_size[0], 
+                self.height / self.map_size[1])
+        self.__padding = ((self.width - self.__cell_size * self.map_size[0]) / 2,
+                (self.height - self.__cell_size * self.map_size[1]) / 2) 
 
     def __update_pos(self, node, x, y, width, height, z_index):
         dx, dy = self.__delta[node]
@@ -80,7 +80,8 @@ class MapContainer(Node):
                     dx = dx * ratio
                     dy = dy * ratio
                     self.__delta[node] = (dx, dy)
-                    self.__update_pos(node, pos[0], pos[1], new_width, new_height, node.z_index)
+                    self.__update_pos(node, pos[0], pos[1], 
+                            new_width, new_height, node.z_index)
     
     def get_cell_size(self):
         return self.__cell_size
@@ -95,7 +96,9 @@ class MapContainer(Node):
         self.__orig_z_index[node] = node.z_index
 
         pos = self.get_cell_pos(x, y)
-        self.__update_pos(node, pos[0], pos[1], node.width, node.height, node.z_index + self.__get_z_index_delta(y))
+        self.__update_pos(node, pos[0], pos[1], 
+                node.width, node.height, 
+                node.z_index + self.__get_z_index_delta(y))
 
     def remove_node(self, node):
         Node.remove_node(self, node)
@@ -120,7 +123,9 @@ class MapContainer(Node):
         self.__cell[node] = (x, y)
 
         pos = self.get_cell_pos(x, y)
-        self.__update_pos(node, pos[0], pos[1], node.width, node.height, self.__orig_z_index[node] + self.__get_z_index_delta(y))
+        self.__update_pos(node, pos[0], pos[1], 
+                node.width, node.height, 
+                self.__orig_z_index[node] + self.__get_z_index_delta(y))
 
     def move_pos(self, node, delta_x, delta_y):
         dx, dy = self.__delta[node]
@@ -128,7 +133,9 @@ class MapContainer(Node):
         new_y = node.y + delta_y - dy
 
         top_left = self.get_cell_pos(0, 0)
-        bottom_right = self.get_cell_pos(self.map_size[0] - 1, self.map_size[1] - 1)
+        bottom_right = self.get_cell_pos(self.map_size[0] - 1, 
+                self.map_size[1] - 1)
+
         if new_x < top_left[0]:
             new_x = top_left[0]
         elif new_x > bottom_right[0]:
@@ -150,7 +157,9 @@ class MapContainer(Node):
         self.__map[new_cell[0]][new_cell[1]].append(node)
         self.__cell[node] = new_cell
         self.__update_pos(node, new_x, new_y, node.width, node.height, 
-                self.__orig_z_index[node] + self.__get_z_index_delta(new_cell[1]))
+                (self.__orig_z_index[node] + 
+                    self.__get_z_index_delta(new_cell[1]))
+                )
 
     def get_cell_pos(self, x, y):
         return (
@@ -165,7 +174,7 @@ class MapContainer(Node):
 class Label(Node):
     def __init__(self, parent, style, 
             text='', font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), 
-            margin=(0, 0, 0, 0), center=False):
+            margin=(10, 10, 10, 10), center=False):
 
         super(Label, self).__init__(parent, style)
         self.text = text
@@ -247,7 +256,7 @@ class Selections(Node):
     def on_resize(self):
         Node.on_resize(self)
         # resize the selected label here to get the updated position
-        # XXX: bad
+        # XXX: bad approach
         self._labels[self.selected].on_resize()
         self.select(self.selected)
 

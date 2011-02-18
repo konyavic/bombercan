@@ -9,7 +9,7 @@ import gtk.gdk as gdk
 import gobject
 import cairo
 
-from pnode import *
+from pnode import Node
 
 class ExplosionEffect(Node):
     def __init__(self, parent, style, fire, get_cell_size, on_die):
@@ -45,11 +45,13 @@ class ExplosionEffect(Node):
 
 
 class Particle(object):
-    __slots__ = ('size', 'v_size', 'position', 'velocity', 'accel', 'color', 'v_color', 'lifetime')
+    __slots__ = ('size', 'v_size', 'position', 
+            'velocity', 'accel', 'color', 'v_color', 'lifetime')
 
 class ParticleEffect(Node):
     def __init__(self, parent, style, 
-            size, color, v_color, center, velocity, velocity_deviation, lifetime,
+            size, color, v_color, center, 
+            velocity, velocity_deviation, lifetime,
             v_size=0, size_deviation=0, accel=(0, 0),
             max_amount=0, initial_amount=0, spawn_interval=0.0):
 
@@ -86,7 +88,8 @@ class ParticleEffect(Node):
         p.v_size = self.v_size
         p.lifetime = self.lifetime
         p.position = self.center
-        p.velocity = map(_deviated, zip(self.velocity, self.velocity_deviation))
+        p.velocity = map(_deviated, 
+                zip(self.velocity, self.velocity_deviation))
         p.accel = self.accel
         p.color = self.color
         p.v_color = self.v_color
@@ -104,8 +107,10 @@ class ParticleEffect(Node):
         interval2 = (interval, ) * 2
         interval4 = (interval, ) * 4
         for p in particles:
-            p.position = map(update_value, zip(p.position, p.velocity, interval2))
-            p.velocity = map(update_value, zip(p.velocity, p.accel, interval2))
+            p.position = map(update_value, 
+                    zip(p.position, p.velocity, interval2))
+            p.velocity = map(update_value, 
+                    zip(p.velocity, p.accel, interval2))
             p.color = map(update_value, zip(p.color, p.v_color, interval4))
             p.color = map(restrict, p.color)
             p.size += p.v_size * interval
@@ -116,7 +121,8 @@ class ParticleEffect(Node):
         # spawn new particle
         self.time_elapsed += interval
         if (self.time_elapsed > self.spawn_interval
-                and (self.max_amount == 0 or len(self.particles) <= self.max_amount)):
+                and (self.max_amount == 0 
+                    or len(self.particles) <= self.max_amount)):
 
             self.time_elapsed = 0.0
             self.spawn()

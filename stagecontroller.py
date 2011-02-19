@@ -3,6 +3,7 @@
 
 from new import instancemethod
 from random import random
+from math import pi
 
 BLOCK           = 1 << 0
 CHARACTER       = 1 << 1
@@ -13,6 +14,7 @@ PLAYER          = 1 << 5
 BOMB            = 1 << 6
 FIRE            = 1 << 7
 DEAD            = 1 << 8
+ITEM            = 1 << 9
 
 def stageobj(flag, node):
     try:
@@ -118,7 +120,6 @@ def make_character(stage, node,
         if on_move: on_move(dir)
     
     def stop(self, dir=None):
-        # XXX: key event may be lost
         if len(self.dir_queue) > 0 and dir == self.dir_queue[0]:
             self.dir_queue.pop(0)
             if on_stop: on_stop(dir)
@@ -155,10 +156,15 @@ def make_bomber(stage, node,
     node.bomb_delay = bomb_delay
     node.bomb_power = bomb_power
     node.bomb_count = bomb_count
+    node.cur_bomb_count = 0
 
     def bomb(self):
-        stage.put_bomb(*stage.map.get_cell(self), 
-                delay=self.bomb_delay, power=self.bomb_power)
+        if self.cur_bomb_count >= node.bomb_count:
+            return
+
+        self.cur_bomb_count += 1
+        stage.put_bomb(*stage.map.get_cell(self),
+                delay=self.bomb_delay, power=self.bomb_power, bomber=self)
 
         if on_bomb: on_bomb()
 
@@ -218,15 +224,17 @@ def make_trackingfloor(stage, node, x, y, on_enter, on_leave):
 def is_bomb(node):
     return stageobj_has_flag(BOMB, node)
 
-def make_bomb(node, delay, power, on_explode):
+def make_bomb(node, delay, power, bomber, on_explode):
     stageobj(BOMB, node)
 
     node.bomb_delay = delay
     node.bomb_power = power
+    node.bomber = bomber
     
     def on_tick(self, interval):
         self.bomb_delay -= interval
         if self.bomb_delay < 0:
+            node.bomber.cur_bomb_count -= 1
             on_explode()
 
     node.on_tick = instancemethod(on_tick, node)
@@ -237,3 +245,30 @@ def is_fire(node):
 
 def fire(node):
     return stageobj(FIRE, node)
+
+def is_item(node):
+    return stageobj_has_flag(ITEM, node)
+
+def make_item(stage, node, on_eat=None):
+    stageobj(ITEM, node)
+
+    def eat(self, who):
+        if on_eat: on_eat(who)
+        stage.map.remove_node(self)
+        stage.add_node(self)
+        style = self.style
+        style['left'] = self.x + stage.map.x
+        style['top'] = self.y + stage.map.y
+        self.set_style(style)
+
+        def _eat_action(self, interval, phase):
+            cell_size = stage.map.get_cell_size()
+            self.set_alpha(1 - phase)
+            self.set_translation(0, -phase * cell_size * 3)
+            self.set_rotate(phase * pi * 4)
+
+        self.add_action('eaten', _eat_action, duration=1.5, update=True)
+
+    node.eat = instancemethod(eat, node)
+
+    return node

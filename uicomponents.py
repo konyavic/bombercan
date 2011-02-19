@@ -87,12 +87,13 @@ class MapContainer(Node):
         return self.__cell_size
 
     def add_node(self, node, x, y, dx=0, dy=0):
+        ratio = float(self.__cell_size) / self.__orig_cell_size
         Node.add_node(self, node)
         self.__map[x][y].append(node)
         self.__delta[node] = (dx, dy)
-        self.__orig_delta[node] = self.__delta[node]
+        self.__orig_delta[node] = (dx / ratio, dy / ratio)
         self.__cell[node] = (x, y)
-        self.__orig_size[node] = (node.width, node.height)
+        self.__orig_size[node] = (node.width / ratio, node.height / ratio)
         self.__orig_z_index[node] = node.z_index
 
         pos = self.get_cell_pos(x, y)

@@ -158,7 +158,8 @@ class StageScene(Node):
                     'z-index': layers['object'] }
                 )
         block(obj)
-        make_breakable(self, obj)
+        make_breakable(self, obj, 
+                on_die=lambda: self.put_item(x, y))
         self.map.add_node(obj, x, y, 0, -cell_size)
 
     def create_soft_blocks(self, count):
@@ -223,6 +224,8 @@ class StageScene(Node):
         self.player = self.create_player_at(0, 0)
         self.create_dummy_obj_at(0, 1)
         self.create_dummy_obj_at(1, 0)
+        self.create_soft_block_at(0, 2)
+        self.create_soft_block_at(2, 0)
         self.create_hard_blocks()        
         self.create_enemies(n_enemies)
         self.create_soft_blocks(n_blocks)        
@@ -265,6 +268,10 @@ class StageScene(Node):
 
         if self.key_up('z'): self.player.bomb()
 
+        #
+        # XXX: move to character check()
+        #
+
         # Real destroy of marked nodes
         for n in self._mark_destroy:
             n.die()
@@ -278,6 +285,8 @@ class StageScene(Node):
                 self.game_reset()
             elif is_fire(n):
                 self.game_reset()
+            elif is_item(n):
+                n.eat(self.player)
 
         # Check enemies
         for e in self.enemies:
@@ -362,7 +371,17 @@ class StageScene(Node):
 
         map.move_pos(node, dx, dy)
 
-    def put_bomb(self, x, y, delay, power):
+    def put_bomb(self, x, y, delay, power, bomber):
+        """Create a bomb at the specified cell.
+        Called by bomber.
+
+        """
+        nodes = self.map.get_cell_nodes(x, y)
+        for n in nodes:
+            if is_bomb(n):
+                # There is already a bomb in the cell
+                return False
+
         cell_size = self.map.get_cell_size()
         bomb = Bomb(
                 parent=self.map,
@@ -374,10 +393,26 @@ class StageScene(Node):
         block(bomb)
         make_breakable(self, bomb, 
                 on_die=lambda: self.explode(bomb, x, y, power))
-        make_bomb(bomb, delay, power,
+        make_bomb(bomb, delay, power, bomber,
                 on_explode=lambda: bomb.die())
         bomb.count()
         self.map.add_node(bomb, x, y)
+        return True
+
+    def put_item(self, x, y):
+        cell_size = self.map.get_cell_size()
+        obj = FireItem(parent=self.map,
+                style={
+                    'width': cell_size,
+                    'height': cell_size,
+                    'z-index': layers['object'] }
+                )
+        def _on_eat(character):
+            character.bomb_power += 1
+
+        make_breakable(self, obj)
+        make_item(self, obj, on_eat=_on_eat)
+        self.map.add_node(obj, x, y)
 
     def explode(self, node, x, y, power):
         """Do all the works when a bomb explode.

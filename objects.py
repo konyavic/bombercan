@@ -276,6 +276,15 @@ class Floor(Node):
                 )
         self.__draw_simple_pattern(cr, tmp_color)
 
+class FireItem(Node):
+    def on_update(self, cr):
+        cr.rectangle(0, 0, self.width, self.height)
+        cr.set_source_rgb(1, 1, 1)
+        cr.fill()
+        cr.arc(self.width / 2.0, self.height / 2.0, self.width * 0.4, 0, pi * 2)
+        cr.set_source_rgb(1.0, 0.5, 0.5)
+        cr.fill()
+
 class DummyRect(Node):
     def on_update(self, cr):
         # surface

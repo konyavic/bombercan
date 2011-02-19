@@ -7,6 +7,8 @@ from stagescene import StageScene
 from printfps import printfps
 
 class Bombercan(Game):
+    """The main class.
+    """
     def __init__(self):
         super(Bombercan, self).__init__('BomberCan', 500, 500, 80)
 
@@ -40,6 +42,7 @@ class Bombercan(Game):
 
     @printfps()
     def on_tick(self, interval):
+        # Do nothing but print the fps 
         pass
 
 def main():

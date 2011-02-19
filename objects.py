@@ -279,10 +279,19 @@ class Floor(Node):
 class FireItem(Node):
     def on_update(self, cr):
         cr.rectangle(0, 0, self.width, self.height)
-        cr.set_source_rgb(1, 1, 1)
+        cr.set_source_rgba(1, 1, 1, 0.5)
         cr.fill()
         cr.arc(self.width / 2.0, self.height / 2.0, self.width * 0.4, 0, pi * 2)
-        cr.set_source_rgb(1.0, 0.5, 0.5)
+        cr.set_source_rgb(0.7, 0.7, 0)
+        cr.fill()
+
+class BombItem(Node):
+    def on_update(self, cr):
+        cr.rectangle(0, 0, self.width, self.height)
+        cr.set_source_rgba(1, 1, 1, 0.5)
+        cr.fill()
+        cr.arc(self.width / 2.0, self.height / 2.0, self.width * 0.4, 0, pi * 2)
+        cr.set_source_rgb(0, 0.5, 0.7)
         cr.fill()
 
 class DummyRect(Node):

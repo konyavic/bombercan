@@ -159,7 +159,7 @@ class StageScene(Node):
                 )
         block(obj)
         make_breakable(self, obj, 
-                on_die=lambda: self.put_item(x, y))
+                on_die=lambda: self.put_item_random(x, y))
         self.map.add_node(obj, x, y, 0, -cell_size)
 
     def create_soft_blocks(self, count):
@@ -332,6 +332,7 @@ class StageScene(Node):
         """Check the target cell whether it is blocked or not,
         and move the object in the map.
         Some adjustion is applied to make the turning smoother.
+
         """
         if dx == 0 and dy == 0:
             return
@@ -391,15 +392,18 @@ class StageScene(Node):
                     'z-index': layers['object'] }
                 )
         block(bomb)
-        make_breakable(self, bomb, 
-                on_die=lambda: self.explode(bomb, x, y, power))
+        def _on_die():
+            bomber.cur_bomb_count -= 1
+            self.explode(bomb, x, y, power)
+
+        make_breakable(self, bomb, on_die=_on_die)
         make_bomb(bomb, delay, power, bomber,
                 on_explode=lambda: bomb.die())
         bomb.count()
         self.map.add_node(bomb, x, y)
         return True
 
-    def put_item(self, x, y):
+    def put_fireitem(self, x, y):
         cell_size = self.map.get_cell_size()
         obj = FireItem(parent=self.map,
                 style={
@@ -414,8 +418,30 @@ class StageScene(Node):
         make_item(self, obj, on_eat=_on_eat)
         self.map.add_node(obj, x, y)
 
+    def put_bombitem(self, x, y):
+        cell_size = self.map.get_cell_size()
+        obj = BombItem(parent=self.map,
+                style={
+                    'width': cell_size,
+                    'height': cell_size,
+                    'z-index': layers['object'] }
+                )
+        def _on_eat(character):
+            character.bomb_count += 1
+
+        make_breakable(self, obj)
+        make_item(self, obj, on_eat=_on_eat)
+        self.map.add_node(obj, x, y)
+
+    def put_item_random(self, x, y):
+        r = int(random() * 10)
+        if 3 < r and r < 6:
+            self.put_fireitem(x, y)
+        elif 6 < r and r < 10:
+            self.put_bombitem(x, y)
+
     def explode(self, node, x, y, power):
-        """Do all the works when a bomb explode.
+        """This method do all the jobs when a bomb explode.
 
         1) Calculate the path of fire
         2) Destroy things on the path
@@ -451,6 +477,7 @@ class StageScene(Node):
         def _put_fire(x, y):
             """Put an invisible fire object to target cell.
             This fire object may destroy characters coming in.
+
             """
             _fire = Node(self.map, {'width': 1, 'height': 1})
             fire(_fire)

@@ -151,7 +151,7 @@ def make_character(stage, node,
     return node
 
 def make_bomber(stage, node,
-        bomb_delay=5, bomb_power=3, bomb_count=1, on_bomb=None):
+        bomb_delay=5, bomb_power=1, bomb_count=1, on_bomb=None):
 
     node.bomb_delay = bomb_delay
     node.bomb_power = bomb_power
@@ -234,7 +234,6 @@ def make_bomb(node, delay, power, bomber, on_explode):
     def on_tick(self, interval):
         self.bomb_delay -= interval
         if self.bomb_delay < 0:
-            node.bomber.cur_bomb_count -= 1
             on_explode()
 
     node.on_tick = instancemethod(on_tick, node)

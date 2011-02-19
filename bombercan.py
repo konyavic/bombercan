@@ -5,12 +5,16 @@ from pnode import Game
 from menuscene import MenuScene
 from stagescene import StageScene
 from printfps import printfps
+from audio import AudioManager
 
 class Bombercan(Game):
     """The main class.
     """
     def __init__(self):
         super(Bombercan, self).__init__('BomberCan', 500, 500, 80)
+
+        audio = AudioManager()
+        audio.play('bombercan.wav', loop=True)
 
         def game_start():
             self.top_node=self.stage
@@ -22,6 +26,7 @@ class Bombercan(Game):
             self.stage = StageScene(
                     parent=self,
                     style={},
+                    audio=audio,
                     map_size=(15, 15), 
                     margin=(20, 20, 20, 20),
                     key_up=self.key_up,

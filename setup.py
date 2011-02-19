@@ -14,11 +14,13 @@ setup(
             ],
         options = {
             'py2exe': {
-                'includes': 'cairo, pango, pangocairo, atk, gobject, gio'
+                'includes': 'cairo, pango, pangocairo, atk, gobject, gio, pyaudio'
                 }
             },
         data_files = [
             'stage_bg.png',
-            'menu_bg.png'
+            'menu_bg.png',
+            'bombercan.wav',
+            'explode.wav'
             ]
         )

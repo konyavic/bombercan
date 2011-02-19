@@ -191,27 +191,15 @@ class StageScene(Node):
         self.dummies = []
 
     def __init__(self, parent, style, 
-            map_size, margin, key_up, key_down, on_game_reset):
+            audio, map_size, margin, key_up, key_down, on_game_reset):
 
         super(StageScene, self).__init__(parent, style)
+        self.audio = audio
         self.map_size = map_size
         self.margin = margin
         self.key_up = key_up
         self.key_down = key_down
         self.game_reset = on_game_reset
-
-        """
-        self.box = MessageBox(
-                parent=self, 
-                style={
-                    'width': '80%',
-                    'height': '33%',
-                    'align': 'center',
-                    'vertical-align': 'center',
-                    'z-index': -500 },
-                opt=None)
-        self.add_node(self.box)
-        """
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png('stage_bg.png')
@@ -547,3 +535,6 @@ class StageScene(Node):
             a = (pi / 8) * (1.0 - phase)
             self.set_rotate(a * sin(phase * 8 * 2 * pi))
         explosion.add_action('shake', _shake, duration=2, update=True)
+
+        # Play SE
+        self.audio.play('explode.wav')

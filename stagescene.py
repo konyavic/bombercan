@@ -109,7 +109,7 @@ class StageScene(Node):
         self.map.add_node(obj, x, y, 0, 0)
 
         # Create dummy objects to prevent enemies 
-        # from concentrating in one space
+        # from concentrating at one place
         self.create_dummy_obj_at(x - 1, y)
         self.create_dummy_obj_at(x + 1, y)
         self.create_dummy_obj_at(x, y - 1)
@@ -220,6 +220,33 @@ class StageScene(Node):
         self.clear_dummy_obj()
 
         self._mark_destroy = set()
+
+    def parse(self, stage_str, n_enemies, n_blocks):
+        self.create_map()
+        self.create_floor()
+
+        stage_str = stage_str.strip()
+        rows = stage_str.split('\n')
+        for y in xrange(0, self.map_size[1]):
+            for x in xrange(0, self.map_size[0]):
+                c = rows[y][x]
+                if c == 'x':
+                    self.create_hard_block_at(x, y)
+                elif c == '@':
+                    self.player = self.create_player_at(x, y)
+                elif c == '.':
+                    self.create_dummy_obj_at(x, y)
+                elif c == 'o':
+                    self.create_soft_block_at(x, y)
+                elif c == ' ':
+                    pass
+
+        self.create_enemies(n_enemies)
+        self.create_soft_blocks(n_blocks)        
+        self.clear_dummy_obj()
+
+        self._mark_destroy = set()
+
 
     def on_update(self, cr):
         scale_width = self.width / float(self.texture['bgimg'].get_width())
@@ -400,6 +427,7 @@ class StageScene(Node):
                     'z-index': layers['object'] }
                 )
         def _on_eat(character):
+            self.audio.play('kan.wav')
             character.bomb_power += 1
 
         make_breakable(self, obj)
@@ -415,6 +443,7 @@ class StageScene(Node):
                     'z-index': layers['object'] }
                 )
         def _on_eat(character):
+            self.audio.play('kan.wav')
             character.bomb_count += 1
 
         make_breakable(self, obj)
@@ -437,6 +466,9 @@ class StageScene(Node):
         4) Show the effect
 
         """
+        # Play SE
+        self.audio.play('explode.wav')
+
         cell_size = self.map.get_cell_size()
 
         # Step 1-3
@@ -536,5 +568,3 @@ class StageScene(Node):
             self.set_rotate(a * sin(phase * 8 * 2 * pi))
         explosion.add_action('shake', _shake, duration=2, update=True)
 
-        # Play SE
-        self.audio.play('explode.wav')

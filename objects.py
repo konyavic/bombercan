@@ -291,12 +291,39 @@ class Bishi(Node):
         cr.set_line_width(1.5)
         cr.stroke()
 
+class Drop(Node):
+    def __init__(self, parent, style):
+        super(Drop, self).__init__(parent, style)
+        use_basic_motions(self)
+
+    def on_update(self, cr):
+        width, height = self.width, self.height
+
+        # Draw the drop-like shape
+        cr.move_to(width * 0.4, height * 0.05)
+        cr.curve_to(
+                width * 0.9, height * 0.5,
+                width * -0.05, height * 0.8,
+                width * 0.5, height * 0.95
+                )
+        cr.curve_to(
+                width * 0.95, height * 0.95,
+                width * 1.0, height * 0.3,
+                width * 0.4, height * 0.05
+                )
+        cr.close_path()
+        cr.set_source_rgba(0, 0, 1, 0.7)
+        cr.fill_preserve()
+        cr.set_source_rgb(0, 0, 0)
+        cr.set_line_width(1.5)
+        cr.stroke()
+
 class Floor(Node):
     def __init__(self, parent, style):
         super(Floor, self).__init__(parent, style)
         self.color = (0.5, 0.5, 1, 0.7)
 
-    def __draw_simple_pattern(self, cr, color):
+    def _draw_simple_pattern(self, cr, color):
         cr.set_line_width(2)
         cr.set_source_rgba(*color)
         cr.rectangle(0, 0, self.width, self.height)
@@ -308,7 +335,7 @@ class Floor(Node):
 
     def on_update(self, cr):
         self.color = (0.5, 0.5, 1, 0.7)
-        self.__draw_simple_pattern(cr, self.color)
+        self._draw_simple_pattern(cr, self.color)
 
     @animation
     def play_blink(self, cr, phase):
@@ -318,7 +345,7 @@ class Floor(Node):
                 0.25 + 0.25 * c, 
                 0.5 + 0.5 * c,
                 0.7)
-        self.__draw_simple_pattern(cr, self.color)
+        self._draw_simple_pattern(cr, self.color)
 
     @animation
     def play_fadeout(self, cr, phase):
@@ -328,7 +355,7 @@ class Floor(Node):
                 self.color[2] + (1 - self.color[2]) * phase,
                 0.7
                 )
-        self.__draw_simple_pattern(cr, tmp_color)
+        self._draw_simple_pattern(cr, tmp_color)
 
 class FireItem(Node):
     def on_update(self, cr):

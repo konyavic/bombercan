@@ -3,6 +3,7 @@
 
 """The topmost executable module of Bombercan."""
 
+import stagesetting
 from pnode import Game
 from menuscene import MenuScene
 from stagescene import StageScene
@@ -29,17 +30,20 @@ class Bombercan(Game):
                     parent=self,
                     style={},
                     audio=audio,
-                    map_size=(15, 15), 
+                    #map_size=(15, 15), 
+                    map_size=(7, 7), 
                     margin=(20, 20, 20, 20),
                     key_up=self.key_up,
                     key_down=self.key_down,
                     on_game_reset=game_reset
                 )
-            self.stage.generate(20, 60)
+            #self.stage.generate(20, 60)
+            self.stage.parse(stagesetting.stage_1, 3, 7)
 
         self.menu = MenuScene(
                 parent=self,
                 style={},
+                audio=audio,
                 key_up=self.key_up,
                 key_down=self.key_down,
                 on_game_start=game_start

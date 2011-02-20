@@ -16,15 +16,16 @@ from motions import *
 
 class MenuScene(Node):
     """The game scene that display the main menu from game start."""
-    def __init__(self, parent, style, key_down, key_up, on_game_start):
+    def __init__(self, parent, style, audio, key_down, key_up, on_game_start):
         """Create and put the components for the title, 
         the main menu, etc.
         
         """
         super(MenuScene, self).__init__(parent, style)
 
-        # Receive funtion key_up(), key_down() from class Game 
+        # Receive class audio, funtion key_up() and key_down() from class Game
         # to check player's input
+        self.audio = audio
         self.key_up = key_up
         self.key_down = key_down
 
@@ -119,8 +120,10 @@ class MenuScene(Node):
         """
         if self.key_up('Up'):
             self.sel.select_up()
+            self.audio.play('select.wav')
         elif self.key_up('Down'):
             self.sel.select_down()
+            self.audio.play('select.wav')
 
         if self.key_up('space'):
             self.on_game_start()

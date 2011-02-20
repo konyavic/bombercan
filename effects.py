@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""This module containes visual effects (also implemented as nodes)."""
+
 from math import pi
 from random import random
 
@@ -12,7 +14,20 @@ import cairo
 from pnode import Node
 
 class ExplosionEffect(Node):
+    """This effect is showed when a bomb explode."""
     def __init__(self, parent, style, fire, get_cell_size, on_die):
+        """Initialize this effect.
+        
+        Arguments:
+
+        fire -- a list of the length of four fire arms (top, right, down, left)
+
+        get_cell_size -- a function that returns the cell size 
+        (should be MapContainer.get_cell_size())
+
+        on_die -- the callback function which is called when this effect ends
+
+        """
         super(ExplosionEffect, self).__init__(parent, style)
         self.fire = fire
         self.get_cell_size = get_cell_size
@@ -45,15 +60,48 @@ class ExplosionEffect(Node):
 
 
 class Particle(object):
+    """The individual particle for particle system."""
     __slots__ = ('size', 'v_size', 'position', 
             'velocity', 'accel', 'color', 'v_color', 'lifetime')
 
 class ParticleEffect(Node):
+    """Display effects using particle system."""
     def __init__(self, parent, style, 
             size, color, v_color, center, 
             velocity, velocity_deviation, lifetime,
             v_size=0, size_deviation=0, accel=(0, 0),
             max_amount=0, initial_amount=0, spawn_interval=0.0):
+        """Initilize this particle system.
+
+        Arguments:
+
+        size -- the size of one particle
+        
+        color -- the rgba value of the initial color for each particle
+
+        v_color -- the vector for the change of color
+
+        center -- the position to spawn new particles (relative position)
+
+        velocity -- the velocity of each particle
+
+        velocity_deviation -- the deviation of initial velocity of each paricle
+
+        lifetime -- the life of each particle (in second)
+
+        v_size -- the change of size
+
+        size_deviation -- the deviation of initial size of each particle
+
+        accel -- the acceleration
+
+        max_amount -- the max number of particles
+
+        initial_amount -- the initial number of particles
+
+        spawn_interval -- the period to spawn new particles
+
+        """
 
         super(ParticleEffect, self).__init__(parent, style)
         # color
@@ -103,6 +151,7 @@ class ParticleEffect(Node):
         def restrict(e):
             return 0.0 if e <= 0.0 else 1.0 if e >= 1.0 else e
 
+        # Update particles
         particles = list(self.particles)
         interval2 = (interval, ) * 2
         interval4 = (interval, ) * 4
@@ -118,7 +167,7 @@ class ParticleEffect(Node):
             if p.lifetime <= 0.0 or p.color[3] <= 0.0 or p.size <= 0:
                 self.particles.remove(p)
 
-        # spawn new particle
+        # Spawn new particle
         self.time_elapsed += interval
         if (self.time_elapsed > self.spawn_interval
                 and (self.max_amount == 0 

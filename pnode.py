@@ -1,6 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""The core module.
+
+There are only two core classes: Node and Game.
+"""
+
 from math import sqrt
 from time import time
 from functools import wraps

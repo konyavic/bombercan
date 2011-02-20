@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""This module contains the objects that handle the graphics 
+"""This module contains objects that handle the graphics 
 and control logic altogether by themselves.
 
 """

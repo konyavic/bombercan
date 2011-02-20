@@ -1,6 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""This module contains objects that handle graphics only 
+(including animations).
+
+"""
+
 from math import pi
 from math import sin
 from math import cos
@@ -21,6 +26,8 @@ class Bomb(Node):
     def __draw(self, cr):
         width = self.width
         height = self.height
+
+        # Draw the small circle
         cr.arc(
                 width * 0.6, 
                 height * 0.33, 
@@ -32,6 +39,7 @@ class Bomb(Node):
         cr.set_source_rgb(0, 0, 0)
         cr.stroke()
 
+        # Draw the big circle
         cr.arc(
                 width * 0.45, 
                 height * 0.55, 
@@ -47,11 +55,13 @@ class Bomb(Node):
         self.__draw(cr)
 
     def count(self):
+        """Play the animtion when it is counting down."""
         self.scale(end_scale=(1.5, 1.5), duration=1.5, 
                 rel_origin=(0.5, 0.8), harmonic=True, loop=True)
 
 class HardBlock(Node):
     def on_update(self, cr):
+        # Draw a mountain-like shape
         cr.move_to(self.width * 0.15, self.height * 0.85)
         cr.curve_to(
                 self.width * 0.3, 0,
@@ -73,6 +83,8 @@ class HardBlock(Node):
 class SoftBlock(Node):
     def on_update(self, cr):
         width, height = self.width, self.height
+
+        # Draw a drum-like shape
         cr.move_to(width * 0.2, height * 0.85)
         cr.rel_curve_to(
                 width * 0.2, height * 0.07, 
@@ -192,38 +204,44 @@ class Can(Node):
         width, height = self.width, self.height
         cr.save()
         cr.set_line_join(cairo.LINE_JOIN_BEVEL)
-        # draw feets
+        # Draw feets
         self.__draw_feet(cr, width * 0.3, height * 0.8)
         self.__draw_feet(cr, width * (1 - 0.3), height * 0.8, -1)
-        # draw body
+        # Draw body
         self.__draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0, 0, 0.7))
-        # draw head
+        # Draw head
         self.__draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.7, 0.7, 0.7))
-        # draw eyes
+        # Draw eyes
         self.__draw_eyes(cr)
         cr.restore()
 
     @animation
     def play_moving(self, cr, phase):
+        """This animation is displayed when it is moving.
+        
+        It's feets will step.
+
+        """
         width, height = self.width, self.height
         delta = height * 0.05 * cos(phase * pi * 2)
 
         cr.save()
         cr.set_line_join(cairo.LINE_JOIN_BEVEL)
-        # draw feets
+        # Draw feets
         self.__draw_feet(cr, width * 0.3, height * 0.8 + delta)
         self.__draw_feet(cr, width * (1 - 0.3), height * 0.8 - delta, -1)
-        # draw body
+        # Draw body
         self.__draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0, 0, 0.7))
-        # draw head
+        # Draw head
         self.__draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.7, 0.7, 0.7))
-        # draw eyes
+        # Draw eyes
         self.__draw_eyes(cr)
         cr.restore()
 
 class Bishi(Node):
     class Eyes(Node):
         def on_update(self, cr):
+            # Draw the eyes
             width, height = self.width, self.height
             cr.save()
             cr.scale(1, 0.5)
@@ -262,6 +280,7 @@ class Bishi(Node):
         use_basic_motions(self)
 
     def on_update(self, cr):
+        # Draw the purpple diamond-like body
         cr.move_to(self.width / 2, 0)
         cr.line_to(self.width, self.height / 2)
         cr.line_to(self.width / 2, self.height)
@@ -315,10 +334,12 @@ class FireItem(Node):
     def on_update(self, cr):
         width = self.width
         height = self.height
+        # Draw the background
         cr.rectangle(0, 0, width, height)
         cr.set_source_rgba(1, 1, 1, 0.5)
         cr.fill()
 
+        # Draw the fire-like shape
         cr.move_to(width * 0.2, height * 0.2)
         cr.curve_to(
                 width * 0.5, height * 0.5,
@@ -364,10 +385,13 @@ class BombItem(Node):
     def on_update(self, cr):
         width = self.width
         height = self.height
-        cr.rectangle(0, 0, width, height)
 
+        # Draw the background
+        cr.rectangle(0, 0, width, height)
         cr.set_source_rgba(1, 1, 1, 0.5)
         cr.fill()
+
+        # Draw the bomb
         cr.arc(
                 width * 0.6, 
                 height * 0.33, 
@@ -393,15 +417,17 @@ class BombItem(Node):
 
 class DummyRect(Node):
     def on_update(self, cr):
-        # surface
+        # Show the surface
         cr.set_source_rgba(0, 0, 1, 0.5)
         cr.paint()
-        # drawing space
+        
+        # Show the drawing space
         cr.rectangle(0, 0, self.width, self.height)
         cr.set_source_rgb(1, 1, 0)
         cr.set_line_width(2.5)
         cr.stroke()
-        # center of drawing space
+        
+        # Show the center of drawing space
         center = self.width * 0.5, self.height * 0.5
         cr.move_to(center[0] - 5, center[1] - 5)
         cr.rel_line_to(10, 0)

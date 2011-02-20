@@ -1,11 +1,52 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""This module contains functions for transforming objects.
+
+Currently there are only one funtion: use_basic_motions().
+
+"""
+
 from math import pi
 from math import cos
 from new import instancemethod
 
 def use_basic_motions(node):
+    """Add method scale() and rotate() to this object.
+
+    Method scale():
+    
+    Scale this object in a period of time.
+
+    Arguments:
+    
+    end_scale -- the end scale
+
+    start_scale -- the start scale (default (1.0, 1.0))
+    
+    rel_origin -- the relative center of scale (default (0.5, 0.5))
+    
+    harmonic -- if set to harmonic, 
+    it will perform the scale as a simple harmonic motion
+    (default False)
+
+    Other arguments are the same with Node.add_animation().
+
+    Method rotat():
+
+    Rotate this object in a period of time.
+
+    Arguments:
+
+    end_ang -- end angle (default 2 * pi)
+
+    start_ang -- start angle (default 0)
+
+    rel_origin -- the relative center of rotation (default (0.5, 0.5))
+
+    Other arguments are the same with Node.add_animation().
+
+    """
     def scale(self, end_scale, duration, 
             start_scale=(1.0, 1.0), rel_origin=(0.5, 0.5), harmonic=False, 
             delay=0.0, loop=False, cleanup=None):

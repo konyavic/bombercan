@@ -167,7 +167,7 @@ class ParticleEffect(Node):
             if p.lifetime <= 0.0 or p.color[3] <= 0.0 or p.size <= 0:
                 self.particles.remove(p)
 
-        # Spawn new particle
+        # Spawn a new particle
         self.time_elapsed += interval
         if (self.time_elapsed > self.spawn_interval
                 and (self.max_amount == 0 

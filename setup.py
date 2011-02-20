@@ -9,7 +9,7 @@ setup(
         console = [
             {
                 'script':'bombercan.py',
-                'icon_resources': [(1, 'Star.ico')]
+                'icon_resources': [(1, 'bombercan.ico')]
                 }
             ],
         options = {

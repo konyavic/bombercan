@@ -238,7 +238,7 @@ class Can(Node):
         self.__draw_eyes(cr)
         cr.restore()
 
-class Bishi(Node):
+class Enemy(Node):
     class Eyes(Node):
         def on_update(self, cr):
             # Draw the eyes
@@ -274,11 +274,12 @@ class Bishi(Node):
             cr.stroke()
 
     def __init__(self, parent, style):
-        super(Bishi, self).__init__(parent, style)
-        eyes = Bishi.Eyes(parent=self, style={})
+        super(Enemy, self).__init__(parent, style)
+        eyes = Enemy.Eyes(parent=self, style={})
         self.add_node(eyes)
         use_basic_motions(self)
 
+class Bishi(Enemy):
     def on_update(self, cr):
         # Draw the purpple diamond-like body
         cr.move_to(self.width / 2, 0)
@@ -291,25 +292,21 @@ class Bishi(Node):
         cr.set_line_width(1.5)
         cr.stroke()
 
-class Drop(Node):
-    def __init__(self, parent, style):
-        super(Drop, self).__init__(parent, style)
-        use_basic_motions(self)
-
-    def on_update(self, cr):
+class Drop(Enemy):
+    def _draw(self, cr, phase):
         width, height = self.width, self.height
-
+        phase = sin(phase * 2 * pi)
         # Draw the drop-like shape
-        cr.move_to(width * 0.4, height * 0.05)
+        cr.move_to(width * (0.3 + 0.4 * phase), height * 0.05)
         cr.curve_to(
-                width * 0.9, height * 0.5,
+                width * 0.9 * phase, height * 0.5 * phase,
                 width * -0.05, height * 0.8,
                 width * 0.5, height * 0.95
                 )
         cr.curve_to(
                 width * 0.95, height * 0.95,
-                width * 1.0, height * 0.3,
-                width * 0.4, height * 0.05
+                width * 1.0 * phase, height * 0.3,
+                width * (0.3 + 0.4 * phase), height * 0.05
                 )
         cr.close_path()
         cr.set_source_rgba(0, 0, 1, 0.7)
@@ -317,6 +314,13 @@ class Drop(Node):
         cr.set_source_rgb(0, 0, 0)
         cr.set_line_width(1.5)
         cr.stroke()
+
+    def on_update(self, cr):
+        self._draw(cr, 1)
+        
+    @animation
+    def play_moving(self, cr, phase):
+        self._draw(cr, phase)
 
 class Floor(Node):
     def __init__(self, parent, style):

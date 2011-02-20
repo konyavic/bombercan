@@ -15,6 +15,7 @@ BOMB            = 1 << 6
 FIRE            = 1 << 7
 DEAD            = 1 << 8
 ITEM            = 1 << 9
+BOMB_EATER      = 1 << 10
 
 def stageobj(flag, node):
     try:
@@ -271,3 +272,10 @@ def make_item(stage, node, on_eat=None):
     node.eat = instancemethod(eat, node)
 
     return node
+
+def bombeater(node):
+    return stageobj(BOMB_EATER, node)
+
+def is_bombeater(node):
+    return stageobj_has_flag(BOMB_EATER, node)
+

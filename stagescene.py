@@ -82,7 +82,25 @@ class StageScene(Node):
         self.map.add_node(obj, x, y, 0, -cell_size)
         return obj
 
-    def create_enemy_at(self, x, y):
+    ENEMY_NORMAL    = 0
+    ENEMY_BOMBEATER = 1
+
+    def create_enemy_at(self, x, y, type):
+        if type == StageScene.ENEMY_NORMAL:
+            obj = self.create_enemy_normal_at(x, y)
+        elif type == StageScene.ENEMY_BOMBEATER:
+            obj = self.create_enemy_bombeater_at(x, y)
+
+        # Create dummy objects to prevent enemies 
+        # from concentrating at one place
+        self.create_dummy_obj_at(x - 1, y)
+        self.create_dummy_obj_at(x + 1, y)
+        self.create_dummy_obj_at(x, y - 1)
+        self.create_dummy_obj_at(x, y + 1)
+
+        return obj
+
+    def create_enemy_normal_at(self, x, y):
         cell_size = self.map.get_cell_size()
         obj = Bishi(
                 parent=self.map,
@@ -108,15 +126,36 @@ class StageScene(Node):
         make_simpleai(self, obj)
         self.map.add_node(obj, x, y, 0, 0)
 
-        # Create dummy objects to prevent enemies 
-        # from concentrating at one place
-        self.create_dummy_obj_at(x - 1, y)
-        self.create_dummy_obj_at(x + 1, y)
-        self.create_dummy_obj_at(x, y - 1)
-        self.create_dummy_obj_at(x, y + 1)
-
         return obj
 
+    def create_enemy_bombeater_at(self, x, y):
+        cell_size = self.map.get_cell_size()
+        obj = Drop(
+                parent=self.map,
+                style={
+                    'width': cell_size, 
+                    'height': cell_size, 
+                    'z-index': layers['object'] }
+                )
+        enemy(obj)
+        bombeater(obj)
+        def _on_go_die():
+            obj.stop_ai()
+            obj.reset_animations()
+            obj.reset_actions()
+            obj.reset_transforms()
+            obj.scale((0.5, 0.5), duration=2.0, cleanup=obj.die)
+
+        make_character(self, obj, speed=3.0, 
+                on_move=lambda dir: obj.play_moving(duration=2, loop=True),
+                on_stop=lambda dir: obj.reset_animations(),
+                on_go_die=_on_go_die)
+        make_breakable(self, obj, 
+                on_die=lambda: self.enemies.remove(obj))
+        make_simpleai(self, obj)
+        self.map.add_node(obj, x, y, 0, 0)
+
+        return obj
 
     def create_enemies(self, count):
         self.enemies = []
@@ -127,7 +166,8 @@ class StageScene(Node):
             if self.is_filled(x, y):
                 continue
 
-            enemy = self.create_enemy_at(x, y)
+            #enemy = self.create_enemy_at(x, y, StageScene.ENEMY_NORMAL)
+            enemy = self.create_enemy_at(x, y, StageScene.ENEMY_BOMBEATER)
             self.enemies.append(enemy)
             count -= 1
 
@@ -247,7 +287,6 @@ class StageScene(Node):
 
         self._mark_destroy = set()
 
-
     def on_update(self, cr):
         scale_width = self.width / float(self.texture['bgimg'].get_width())
         scale_height = self.height / float(self.texture['bgimg'].get_height())
@@ -310,6 +349,10 @@ class StageScene(Node):
                 if is_fire(n) and not is_dead(n):
                     e.go_die()
                     break
+                elif is_bombeater(e) and is_bomb(n):
+                    n.bomber.cur_bomb_count -= 1
+                    self.map.remove_node(n)
+                    continue
 
         # Check the winning condition
         if len(self.enemies) == 0:
@@ -334,7 +377,9 @@ class StageScene(Node):
 
         # Check individual nodes in the cell
         for target in self.map.get_cell_nodes(x, y):
-            if is_block(target):
+            if is_bombeater(node) and is_bomb(target):
+                continue
+            elif is_block(target):
                 return True
             elif is_player(node) and is_player(target):
                 return True

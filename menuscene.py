@@ -17,7 +17,10 @@ from motions import *
 class MenuScene(Node):
     """The game scene that display the main menu from game start."""
     def __init__(self, parent, style, key_down, key_up, on_game_start):
-        """Create and put the components for the title, the main menu, etc."""
+        """Create and put the components for the title, 
+        the main menu, etc.
+        
+        """
         super(MenuScene, self).__init__(parent, style)
 
         # Receive funtion key_up(), key_down() from class Game 
@@ -63,21 +66,29 @@ class MenuScene(Node):
 
         # A smoke effect just for the demonstration of my particle system
         particle = ParticleEffect(self, 
-                {'width': '50%', 'height': '50%', 'align': 'center', 'vertical-align': 'bottom'},
+                {
+                    'width': '50%', 
+                    'height': '50%', 
+                    'align': 'center', 
+                    'vertical-align': 'bottom'
+                    },
                 size=10, size_deviation=2, v_size=3,
                 color=(0.8, 0.4, 0, 0.5), v_color=(-0.5, -0.5, 0, -0.25), 
                 center=(0.5, 0.8),
                 velocity=(0, -0.3), velocity_deviation=(0.2, 0.1),
                 lifetime=2.0, initial_amount=100)
         self.add_node(particle)
-        particle.add_action('action', particle.update_action, duration=1, loop=True, update=True)
+        particle.add_action('action', particle.update_action, 
+                duration=1, loop=True, update=True)
 
         # The background image
         self.texture = {}
-        self.texture['bgimg'] = cairo.ImageSurface.create_from_png('menu_bg.png')
+        self.texture['bgimg'] = \
+                cairo.ImageSurface.create_from_png('menu_bg.png')
 
     def on_update(self, cr):
-        """Simply display the background image (centered and touching the window from outside).
+        """Simply display the background image 
+        (centered and touching the window from outside).
         
         Display of other GUI components are handled in each individual class.
 
@@ -102,7 +113,10 @@ class MenuScene(Node):
         cr.paint_with_alpha(0.7)
 
     def on_tick(self, interval):
-        """In each tick, check player's input and move up/down in the menu or select an item."""
+        """In each tick, check player's input to move up / down in the menu 
+        or select a menu item.
+        
+        """
         if self.key_up('Up'):
             self.sel.select_up()
         elif self.key_up('Down'):

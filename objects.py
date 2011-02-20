@@ -19,12 +19,12 @@ class Bomb(Node):
         use_basic_motions(self)
 
     def __draw(self, cr):
-        s_width = self.width
-        s_height = self.height
+        width = self.width
+        height = self.height
         cr.arc(
-                s_width * 0.6, 
-                s_height * 0.33, 
-                s_width * 0.2, 
+                width * 0.6, 
+                height * 0.33, 
+                width * 0.2, 
                 0, pi * 2)
         cr.set_source_rgb(0.2, 0.2, 0.2)
         cr.fill_preserve()
@@ -33,9 +33,9 @@ class Bomb(Node):
         cr.stroke()
 
         cr.arc(
-                s_width * 0.45, 
-                s_height * 0.55, 
-                s_width * 0.35, 
+                width * 0.45, 
+                height * 0.55, 
+                width * 0.35, 
                 0, pi * 2)
         cr.set_source_rgb(0.2, 0.2, 0.2)
         cr.fill_preserve()
@@ -257,7 +257,7 @@ class Bishi(Node):
 
     def __init__(self, parent, style):
         super(Bishi, self).__init__(parent, style)
-        eyes = Bishi.Eyes(parent=self, style={'z-index': style['z-index']})
+        eyes = Bishi.Eyes(parent=self, style={})
         self.add_node(eyes)
         use_basic_motions(self)
 
@@ -313,21 +313,83 @@ class Floor(Node):
 
 class FireItem(Node):
     def on_update(self, cr):
-        cr.rectangle(0, 0, self.width, self.height)
+        width = self.width
+        height = self.height
+        cr.rectangle(0, 0, width, height)
         cr.set_source_rgba(1, 1, 1, 0.5)
         cr.fill()
-        cr.arc(self.width / 2.0, self.height / 2.0, self.width * 0.4, 0, pi * 2)
-        cr.set_source_rgb(0.7, 0.7, 0)
+
+        cr.move_to(width * 0.2, height * 0.2)
+        cr.curve_to(
+                width * 0.5, height * 0.5,
+                width * -0.05, height * 0.9,
+                width * 0.5, height * 0.95)
+        cr.curve_to(
+                width * 1.05, height * 0.9,
+                width * 0.55, height * 0.5,
+                width * 0.95, height * 0.2
+                )
+        cr.curve_to(
+                width * 0.8, height * 0.2,
+                width * 0.7, height * 0.2,
+                width * 0.6, height * 0.4
+                )
+        cr.curve_to(
+                width * 0.55, height * 0.2,
+                width * 0.55, height * 0.2,
+                width * 0.6, height * 0.05
+                )
+        cr.curve_to(
+                width * 0.45, height * 0.1,
+                width * 0.45, height * 0.15,
+                width * 0.4, height * 0.4
+                )
+        cr.curve_to(
+                width * 0.4, height * 0.35,
+                width * 0.35, height * 0.3,
+                width * 0.2, height * 0.2
+                )
+        cr.close_path()
+        cr.set_source_rgb(1.0, 0.7, 0)
+        cr.fill_preserve()
+        cr.set_line_width(1.5)
+        cr.set_source_rgb(0, 0, 0)
+        cr.stroke()
+
+        cr.arc(width * 0.5, height * 0.7, width * 0.15, 0, pi * 2)
+        cr.set_source_rgb(1.0, 1.0, 0)
         cr.fill()
 
 class BombItem(Node):
     def on_update(self, cr):
-        cr.rectangle(0, 0, self.width, self.height)
+        width = self.width
+        height = self.height
+        cr.rectangle(0, 0, width, height)
+
         cr.set_source_rgba(1, 1, 1, 0.5)
         cr.fill()
-        cr.arc(self.width / 2.0, self.height / 2.0, self.width * 0.4, 0, pi * 2)
-        cr.set_source_rgb(0, 0.5, 0.7)
-        cr.fill()
+        cr.arc(
+                width * 0.6, 
+                height * 0.33, 
+                width * 0.2, 
+                0, pi * 2)
+        cr.set_source_rgb(0.2, 0.2, 0.2)
+        cr.fill_preserve()
+        cr.set_line_width(3)
+        cr.set_source_rgb(0, 0, 0)
+        cr.stroke()
+
+        cr.arc(
+                width * 0.45, 
+                height * 0.55, 
+                width * 0.35, 
+                0, pi * 2)
+        cr.set_source_rgb(0.2, 0.2, 0.2)
+        cr.fill_preserve()
+        cr.set_line_width(3)
+        cr.set_source_rgb(0, 0, 0)
+        cr.stroke()
+
 
 class DummyRect(Node):
     def on_update(self, cr):

@@ -1,6 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""This module contains the objects that handle the graphics 
+and control logic altogether by themselves.
+
+"""
+
 from math import pi
 from math import sin
 
@@ -15,6 +20,26 @@ from pnode import Node
 from objects import Bomb
 
 class MapContainer(Node):
+    """This container is the core of the tile-based stage.
+    
+    Basically, it has a matrix of cells.
+    Objects could be added into this container, 
+    without conforming to the size of a cell.
+    This contianer will remember the size when the object was added,
+    and automatically resize it when on_resize() occurs.
+
+    Moreover, it also provides smooth moving of objects between cells.
+    Objects moving between cells do not have to "jump", 
+    but could shift smoothly from one cell to another.
+
+    Determining which cell does the object belong to 
+    is important for collision detection.
+    In this implementation, when an object is moving to the next cell, 
+    it still "belongs" to the original cell
+    until it becomes half in the next cell and half in the original cell.
+    Then, in the next step, it will run into the next cell.
+
+    """
     def __init__(self, parent, style, map_size):
         super(MapContainer, self).__init__(parent, style)
         self.map_size = map_size

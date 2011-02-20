@@ -20,7 +20,7 @@ from pnode import Node
 from objects import Bomb
 
 class MapContainer(Node):
-    """This container is the core of the tile-based stage.
+    """The core of the tile-based stage.
     
     Basically, it has a matrix of cells.
     Objects could be added into this container, 
@@ -28,7 +28,7 @@ class MapContainer(Node):
     This contianer will remember the size when the object was added,
     and automatically resize it when on_resize() occurs.
 
-    Moreover, it also provides smooth moving of objects between cells.
+    Moreover, it also provides "smooth move" of objects between cells.
     Objects moving between cells do not have to "jump", 
     but could shift smoothly from one cell to another.
 
@@ -41,27 +41,39 @@ class MapContainer(Node):
 
     """
     def __init__(self, parent, style, map_size):
+        """Initialize the map (the matix of cells) and 
+        dictionaries for resizing.
+
+        """
         super(MapContainer, self).__init__(parent, style)
         self.map_size = map_size
 
         self.__map = [ [ [] for y in xrange(0, self.map_size[1]) ] 
                 for x in xrange(0, self.map_size[0]) ]
-        self.__delta = {}
-        self.__cell = {}
-        self.__orig_size = {}
-        self.__orig_delta = {}
-        self.__orig_z_index = {}
+
+        # The hash key of dictionaries bellow are objects
+        # delta = object's actual position - cell's position
+        self.__delta = {}   
+        self.__cell = {}    # the reference to the cell
+        
+        # Due to resize, the size, delta, and z-index will change.
+        # The original value are stored in dictionaries bellow.
+        self.__orig_size = {}       # object's original size
+        self.__orig_delta = {}      # object's original delta
+        self.__orig_z_index = {}    # object's original z-index
 
         self.__update_cell_size()
         self.__orig_cell_size = self.__cell_size
     
     def __update_cell_size(self):
+        """Update the cell size of this container (after resize)."""
         self.__cell_size = min(self.width / self.map_size[0], 
                 self.height / self.map_size[1])
         self.__padding = ((self.width - self.__cell_size * self.map_size[0]) / 2,
                 (self.height - self.__cell_size * self.map_size[1]) / 2) 
 
     def __update_pos(self, node, x, y, width, height, z_index):
+        """Update the position (style) of target object."""
         dx, dy = self.__delta[node]
         style = {
                 'left': x + dx,
@@ -73,6 +85,10 @@ class MapContainer(Node):
         node.set_style(style)
 
     def __restrict_pos(self, x, y):
+        """Check and adjust the input position 
+        if it exceed the size of this map.
+        
+        """
         if x < 0:
             x = 0
         elif x >= self.map_size[0]:
@@ -86,9 +102,21 @@ class MapContainer(Node):
         return (x, y)
 
     def __get_z_index_delta(self, y):
+        """Return the adjustment to z-index.
+        
+        Currently it simply returns the inverse of the y value 
+        of it's position.
+
+        """
         return -y
 
     def on_resize(self):
+        """Perform the magic of resize.
+        
+        It first calculates the ratio of change, 
+        then apply the change to all sub-objects.
+
+        """
         Node.on_resize(self)
         self.__update_cell_size()
         ratio = float(self.__cell_size) / self.__orig_cell_size
@@ -109,9 +137,21 @@ class MapContainer(Node):
                             new_width, new_height, node.z_index)
     
     def get_cell_size(self):
+        """Return the cell size of this map."""
         return self.__cell_size
 
     def add_node(self, node, x, y, dx=0, dy=0):
+        """Add the object to target cell, with optional delta.
+
+        The position and z-index of this object will be adjusted.
+        
+        Arguments:
+
+        x, y -- target cell
+
+        dx, dy -- the delta to cell position
+
+        """
         ratio = float(self.__cell_size) / self.__orig_cell_size
         Node.add_node(self, node)
         self.__map[x][y].append(node)
@@ -127,6 +167,11 @@ class MapContainer(Node):
                 node.z_index + self.__get_z_index_delta(y))
 
     def remove_node(self, node):
+        """Remove the object from the map.
+
+        Also clean up the dictionary.
+
+        """
         Node.remove_node(self, node)
         cell = self.get_cell(node)
         self.__map[cell[0]][cell[1]].remove(node)
@@ -137,12 +182,20 @@ class MapContainer(Node):
         del self.__orig_z_index[node]
 
     def get_cell(self, node):
+        """Return the cell which target object belongs to."""
         return self.__cell[node]
 
     def get_cell_nodes(self, x, y):
+        """Return all objects in target cell."""
         return self.__map[x][y]
 
     def move_to(self, node, x, y):
+        """Move the object to target cell.
+        
+        Compared with move_pos(), 
+        this method will make the object suddenly "jump" to target cell.
+
+        """
         cell = self.get_cell(node)
         self.__map[cell[0]][cell[1]].remove(node)
         self.__map[x][y].append(node)
@@ -154,6 +207,15 @@ class MapContainer(Node):
                 self.__orig_z_index[node] + self.__get_z_index_delta(y))
 
     def move_pos(self, node, delta_x, delta_y):
+        """Move the object smoothly.
+
+        This function will change the belonging cell 
+        of target object automatically.
+
+        Arguments:
+
+        delta_x, delta_y -- the delta of move
+        """
         dx, dy = self.__delta[node]
         new_x = node.x + delta_x - dx
         new_y = node.y + delta_y - dy
@@ -162,6 +224,7 @@ class MapContainer(Node):
         bottom_right = self.get_cell_pos(self.map_size[0] - 1, 
                 self.map_size[1] - 1)
 
+        # Restrict the new position in the range of this map
         if new_x < top_left[0]:
             new_x = top_left[0]
         elif new_x > bottom_right[0]:
@@ -171,6 +234,7 @@ class MapContainer(Node):
         elif new_y > bottom_right[1]:
             new_y = bottom_right[1]
 
+        # Calculate the new cell it should belongs to
         half_cell = self.__cell_size / 2
         new_cell = (
                 int((new_x - self.__padding[0] + half_cell) / self.__cell_size),
@@ -179,6 +243,7 @@ class MapContainer(Node):
         new_cell = self.__restrict_pos(*new_cell)
         old_cell = self.get_cell(node)
 
+        # Move the object from old cell to new cell
         self.__map[old_cell[0]][old_cell[1]].remove(node)
         self.__map[new_cell[0]][new_cell[1]].append(node)
         self.__cell[node] = new_cell
@@ -188,26 +253,47 @@ class MapContainer(Node):
                 )
 
     def get_cell_pos(self, x, y):
+        """Return the position of target cell."""
         return (
                 self.__padding[0] + x * self.__cell_size, 
                 self.__padding[1] + y * self.__cell_size
                 )
 
     def get_node_pos(self, node):
+        """Return the position of target object WITHOUT delta."""
         delta = self.__delta[node]
         return (node.x - delta[0], node.y - delta[1])
 
 class Label(Node):
+    """The basic object to display text."""
     def __init__(self, parent, style, 
             text='', font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), 
             margin=(10, 10, 10, 10), center=False):
+        """Initialize the label.
+        
+        Keyword arguments:
+
+        text -- the text to be displayed
+
+        font -- the description of font (in pango format)
+        
+        color -- the rgba value of text color
+        
+        bgcolor -- the rgba value of background color
+        
+        margin -- the margin between the border and the text 
+        (in this order: up, right, down, left)
+
+        center -- should center the text?
+
+        """
 
         super(Label, self).__init__(parent, style)
         self.text = text
         self.font = font
         self.color = color
         self.bgcolor=bgcolor
-        # XXX: margin should be merged into node style
+        # XXX: "margin" should be merged into node style
         self.margin = margin
         self.center = center
 
@@ -221,11 +307,13 @@ class Label(Node):
         margin = self.margin
         w = self.width - margin[1] - margin[3]
         h = self.height - margin[0] - margin[2]
+
+        # Draw the background
         cr.set_source_rgba(*self.bgcolor)
         cr.rectangle(margin[3], margin[0], w, h)
         cr.fill()
 
-        # adjust the size by scaling before showing the text
+        # Adjust the size by scaling before showing the text
         cr.set_source_rgba(*self.color)
         cr.move_to(0, 0)
         pcr = pangocairo.CairoContext(cr)
@@ -245,8 +333,24 @@ class Label(Node):
         pcr.show_layout(layout)
     
 class Selections(Node):
+    """The menu that has several selections."""
     def __init__(self, parent, style, 
-            labels, font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), curser=None):
+            labels, font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), cursor=None):
+        """Initialize the menu.
+        
+        Arguments:
+
+        labels -- a list of strings
+
+        fonr -- the description of font (in pango format)
+
+        color -- the rgba value of text color
+        
+        bgcolor -- the rgba value of background color
+
+        cursor -- the object to be used as the cursor
+
+        """
 
         super(Selections, self).__init__(parent, style)
 
@@ -255,6 +359,7 @@ class Selections(Node):
         self.color = color
         self.bgcolor = bgcolor
 
+        # Create the label component for each label
         self._labels = [ Label(
             parent=self,
             style={
@@ -271,31 +376,37 @@ class Selections(Node):
         for label in self._labels:
             self.add_node(label)
 
-        self.curser = curser
-        self.add_node(curser)
+        self.cursor = cursor
+        self.add_node(cursor)
         self.select(0)
 
     def on_update(self, cr):
+        # Draw the background
+        cr.rectangle(0, 0, self.width, self.height)
         cr.set_source_rgba(*self.bgcolor)
-        cr.paint()
+        cr.fill()
 
     def on_resize(self):
         Node.on_resize(self)
-        # resize the selected label here to get the updated position
+        # Resize the selected label here to get the updated position for cursor
         # XXX: bad approach
         self._labels[self.selected].on_resize()
         self.select(self.selected)
 
     def select(self, i):
+        """Select target option.
+        
+        Also make the selected text shake.
+        """
         self.selected = i
-        self.curser.set_style({
+        self.cursor.set_style({
             'top': self._labels[i].y,
             'left': self._labels[i].x - self._labels[i].height,
             'width': self._labels[i].height,
             'height': self._labels[i].height,
             })
 
-        # XXX: merge into motions
+        # XXX: "shake" should be merged into motions
         def _shake(self, interval, phase):
             a = (pi / 8) * (1.0 - phase)
             self.set_rotate(a * sin(phase * 8 * 2 * pi))
@@ -303,14 +414,17 @@ class Selections(Node):
         self._labels[self.selected].add_action('shake', _shake, duration=2, update=True)
 
     def select_up(self):
+        """Select upward."""
         i = (self.selected - 1) % len(self.labels)
         self.select(i)
 
     def select_down(self):
+        """Select downward."""
         i = (self.selected + 1) % len(self.labels)
         self.select(i)
 
 class MessageBox(Node):
+    """A prototype for message box (to be implemented)."""
     def __init__(self, parent, style, opt):
         super(MessageBox, self).__init__(parent, style)
         self.showing = False

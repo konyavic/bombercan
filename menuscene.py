@@ -32,7 +32,7 @@ class MenuScene(Node):
         self.on_game_start = on_game_start
 
         # The selection menu
-        self.curser = Bomb(parent=self, style={})
+        self.cursor = Bomb(parent=self, style={})
         self.sel = Selections(
                 parent=self,
                 style={
@@ -45,10 +45,10 @@ class MenuScene(Node):
                 labels=(u'Story Mode', u'Free Game'),
                 color=(1, 1, 1, 0.7),
                 bgcolor=(0.3, 0.3, 0.7, 0.7),
-                curser=self.curser
+                cursor=self.cursor
                 )
         self.add_node(self.sel)
-        self.curser.count()
+        self.cursor.count()
 
         # The title (a Label)
         title = Label(

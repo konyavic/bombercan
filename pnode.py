@@ -369,20 +369,21 @@ class Node(object):
             self.action_need_update = False
 
     def do_update_recursive(self, cr, x, y, interval):
-        stack = [(self, x, y)]
+        stack = [(self, x, y, self.z_index)]
         queue = []
 
         while stack:
-            current, x, y = stack.pop(0)
+            current, x, y, z = stack.pop(0)
             node_x = x + current.x
             node_y = y + current.y
-            queue.append((current, node_x, node_y))
-            stack = [(node, node_x, node_y) for node in current.children] + stack
+            z_index = z + current.z_index
+            queue.append((current, node_x, node_y, z_index))
+            stack = [(node, node_x, node_y, z_index) for node in current.children] + stack
 
-        queue.sort(key=lambda tup: -tup[0].z_index)
+        queue.sort(key=lambda tup: -tup[3])
 
         while queue:
-            current, x, y = queue.pop(0)
+            current, x, y, z = queue.pop(0)
             current.do_update(interval)
             abs_x = x + current.surface_x + current.dx
             abs_y = y + current.surface_y + current.dy

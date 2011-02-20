@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""The topmost executable module of Bombercan."""
+
 from pnode import Game
 from menuscene import MenuScene
 from stagescene import StageScene
@@ -8,8 +10,7 @@ from printfps import printfps
 from audio import AudioManager
 
 class Bombercan(Game):
-    """The main class.
-    """
+    """The main class of this game."""
     def __init__(self):
         super(Bombercan, self).__init__('BomberCan', 500, 500, 80)
 
@@ -47,10 +48,11 @@ class Bombercan(Game):
 
     @printfps()
     def on_tick(self, interval):
-        # Do nothing but print the fps 
+        """Do nothing but print the fps."""
         pass
 
 def main():
+    """The entry point."""
     try: 
         game = Bombercan()
         game.run()

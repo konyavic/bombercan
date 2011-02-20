@@ -222,8 +222,43 @@ class Can(Node):
         cr.restore()
 
 class Bishi(Node):
+    class Eyes(Node):
+        def on_update(self, cr):
+            width, height = self.width, self.height
+            cr.save()
+            cr.scale(1, 0.5)
+            cr.arc(
+                    width * 0.33, height,
+                    width * 0.1,
+                    0, 2 * pi)
+            cr.restore()
+
+            cr.set_source_rgb(1, 1, 0)
+            cr.fill_preserve()
+
+            cr.set_source_rgb(0, 0, 0)
+            cr.set_line_width(1)
+            cr.stroke()
+
+            cr.save()
+            cr.scale(1, 0.5)
+            cr.arc(
+                    width * (1 - 0.33), height,
+                    width * 0.1,
+                    0, 2 * pi)
+            cr.restore()
+
+            cr.set_source_rgb(1, 1, 0)
+            cr.fill_preserve()
+
+            cr.set_source_rgb(0, 0, 0)
+            cr.set_line_width(1)
+            cr.stroke()
+
     def __init__(self, parent, style):
         super(Bishi, self).__init__(parent, style)
+        eyes = Bishi.Eyes(parent=self, style={'z-index': style['z-index']})
+        self.add_node(eyes)
         use_basic_motions(self)
 
     def on_update(self, cr):

@@ -12,6 +12,7 @@ from audio import AudioManager
 class Bombercan(Game):
     """The main class of this game."""
     def __init__(self):
+        """Create MenuScene and StageScene and connect them."""
         super(Bombercan, self).__init__('BomberCan', 500, 500, 80)
 
         audio = AudioManager()

@@ -18,7 +18,8 @@ from stagecontroller import *
 layers = {
         'floor': -100,
         'object': -300,
-        'effect': -500
+        'effect': -500,
+        'message': -600
         }
 
 # Fire will exist for # seconds
@@ -87,7 +88,7 @@ class StageScene(Node):
                 on_stop=lambda dir: obj.reset_animations())
         # I could be destroyed by bombs
         make_breakable(self, obj, 
-                on_die=lambda: self.game_reset())
+                on_die=lambda: self.game_lose())
         # I can put bombs
         make_bomber(self, obj)
 
@@ -314,8 +315,21 @@ class StageScene(Node):
         self.margin = margin
         self.key_up = key_up
         self.key_down = key_down
-        self.game_reset = on_game_reset
-        self.game_win = on_game_win
+        self.on_game_reset = on_game_reset
+        self.on_game_win = on_game_win
+        self.win = False
+        self.lose = False
+        
+        self.msg = MessageBox(
+                self, 
+                style={
+                    'width': '80%',
+                    'height': '30%',
+                    'align': 'center',
+                    'vertical-align': 'center',
+                    'z-index': layers['message']},
+                )
+        self.add_node(self.msg)
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png('stage_bg.png')
@@ -390,20 +404,34 @@ class StageScene(Node):
         cr.set_source_surface(self.texture['bgimg'], x, y)
         cr.paint_with_alpha(0.7)
 
+    def game_win(self):
+        self.win = True
+        self.msg.set_text(u'YOU WIN <Press Space>')
+        self.msg.show(True)
+
+    def game_lose(self):
+        self.lose = True
+        self.player.reset_animations()
+        self.player.reset_actions()
+        self.msg.set_text(u'YOU LOSE <Press Space>')
+        self.msg.show(True)
+
     def on_tick(self, interval):
-        if self.key_up('Left'): self.player.move('left')
-        if self.key_up('Up'): self.player.move('up')
-        if self.key_up('Right'): self.player.move('right')
-        if self.key_up('Down'): self.player.move('down')
+        if not self.win and not self.lose:
+            if self.key_up('Left'): self.player.move('left')
+            if self.key_up('Up'): self.player.move('up')
+            if self.key_up('Right'): self.player.move('right')
+            if self.key_up('Down'): self.player.move('down')
 
-        if self.key_down('Left'): self.player.stop('left')
-        if self.key_down('Up'): self.player.stop('up')
-        if self.key_down('Right'): self.player.stop('right')
-        if self.key_down('Down'): self.player.stop('down')
+            if self.key_down('Left'): self.player.stop('left')
+            if self.key_down('Up'): self.player.stop('up')
+            if self.key_down('Right'): self.player.stop('right')
+            if self.key_down('Down'): self.player.stop('down')
 
-        #if self.key_up('space'): self.box.toggle()
+            if self.key_up('z'): self.player.bomb()
 
-        if self.key_up('z'): self.player.bomb()
+        if self.win and self.key_up('space'): self.on_game_win()
+        if self.lose and self.key_up('space'): self.on_game_reset()
 
         #
         # XXX: move to character check()
@@ -413,9 +441,9 @@ class StageScene(Node):
         cell = self.map.get_cell(self.player)
         for n in self.map.get_cell_nodes(*cell):
             if is_enemy(n):
-                self.game_reset()
+                self.game_lose()
             elif is_fire(n):
-                self.game_reset()
+                self.game_lose()
             elif is_item(n):
                 n.eat(self.player)
 
@@ -434,7 +462,7 @@ class StageScene(Node):
                     continue
 
         # Check the winning condition
-        if len(self.enemies) == 0:
+        if len(self.enemies) == 0 and not self.win:
             self.game_win()
 
     def is_filled(self, x, y):
@@ -608,7 +636,9 @@ class StageScene(Node):
 
             for n in nodes:
                 n.add_action('shake', _shake, duration=2, update=True)
-                if is_fireblocking(n):
+                if is_player(n):
+                    self.game_lose()
+                elif is_fireblocking(n):
                     return (True, -1)
                 elif is_bomb(n):
                     # Method die() first removes the node from the map, 

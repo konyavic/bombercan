@@ -436,39 +436,49 @@ class Selections(Node):
 
 class MessageBox(Node):
     """A prototype for message box (to be implemented)."""
-    def __init__(self, parent, style, opt):
+    def __init__(self, parent, style):
         super(MessageBox, self).__init__(parent, style)
         self.showing = False
 
-    def __draw_box(self, cr, box_width, box_height, alpha):
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+        self.label = Label(self, {}, text=u' ', font='MS Gothic', 
+                color=(1, 1, 1, 1), center=True)
+        self.add_node(self.label)
+        self.label.set_alpha(0)
+
+    def set_text(self, text):
+        self.label.set_text(text)
+
+    def _draw_box(self, cr, box_width, box_height, alpha):
         cr.set_source_rgba(0, 0, 0, alpha)
         cr.rectangle(0, 0, box_width, box_height)
         cr.fill()
 
     def on_update(self, cr):
         if self.showing:
-            self.__draw_box(cr, self.width, self.height, 0.5)
-        else:
-            self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width, self.height)
+            self._draw_box(cr, self.width, self.height, 0.5)
 
     def show(self, b):
-        def show_animation(self, phase):
-            self.__draw_box(
+        def show_animation(self, cr, phase):
+            self._draw_box(cr,
                     self.width * 2 * min(0.5, phase), 
                     self.height * 2 * max(0.05, phase - 0.5), 
                     0.5 * phase)
 
-        def hide_animation(self, phase):
-            self.__draw_box(self.width*(1-phase), self.height*(1-phase), 0.5*(1-phase))
+        def hide_animation(self, cr, phase):
+            self._draw_box(cr,
+                    self.width * (1 - phase), 
+                    self.height * (1 - phase), 
+                    0.5 * (1 - phase))
 
         self.showing = b
         if b:
-            self.remove_animation('hide')
-            self.add_animation('show', show_animation, delay=0, period=0.5, loop=False)
+            self.reset_animations()
+            self.set_animation(show_animation, duration=0.5, loop=False, 
+                    cleanup=lambda: self.label.set_alpha(1))
         else:
-            self.remove_animation('show')
-            self.add_animation('hide', hide_animation, delay=0, period=0.1, loop=False)
+            self.reset_animations()
+            self.set_animation(hide_animation, duration=0.1, loop=False,
+                    cleanup=lambda: self.label.set_alpha(0))
 
     def toggle(self):
         if self.showing:

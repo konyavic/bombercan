@@ -9,10 +9,10 @@ stage[0]['blocks'] = 3
 stage[0]['str'] = """
 xxxxxxx
 x@.o Ax
-x.x xox
-xo    x
-x x xox
-x Ao Ax
+x.x x x
+xo   ox
+x x x x
+xA o Ax
 xxxxxxx
 """
 

@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""Settings for story mode."""
+
 stage = []
 
 stage.append({})

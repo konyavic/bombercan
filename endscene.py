@@ -30,8 +30,8 @@ class EndScene(Node):
                 style={'height': '30%', 'top': '15%', 'left': '5%', 'right': '5%'},
                 font='MS Gothic',
                 labels=(
-                    u'Thank You', 
-                    u'For Your Playing!',
+                    u'THANK YOU', 
+                    u'FOR YOUR PLAYING!',
                     ),
                 color=(1, 1, 1, 0.7),
                 margin=(0, 0, 0, 0),
@@ -43,7 +43,8 @@ class EndScene(Node):
                 style={'height': '30%', 'top': '60%', 'left': '10%', 'right': '10%'},
                 font='MS Gothic',
                 labels=(
-                    u'Press Space',
+                    u'<Press Space>',
+                    u' ',
                     u'Program:',
                     u'李承益 (Victor Lee)',
                     u'Bombercan\'s Theme:',

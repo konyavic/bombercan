@@ -26,6 +26,11 @@ FIRE_LASTING=1.5
 
 class StageScene(Node):
     def create_map(self):
+        """Create the map container.
+        
+        Should be called before other create_xxx() methods.
+
+        """
         self.map = MapContainer(
                 parent=self,
                 style={
@@ -42,6 +47,7 @@ class StageScene(Node):
         self.add_node(self.map)
 
     def create_floor(self):
+        """Create a floor object in all cells."""
         def _on_enter(obj):
             return lambda: obj.play_blink(duration=1, loop=True)
         def _on_leave(obj):
@@ -64,6 +70,7 @@ class StageScene(Node):
                 self.map.add_node(obj, x, y)
 
     def create_player_at(self, x, y):
+        """Create the player at the specified cell."""
         cell_size = self.map.get_cell_size()
         obj = Can(
                 parent=self.map,
@@ -72,34 +79,24 @@ class StageScene(Node):
                     'height': cell_size * 2, 
                     'z-index': layers['object'] }
                 )
+        # I am a player
         player(obj)
+        # I am a movable character
         make_character(self, obj, 
                 on_move=lambda dir: obj.play_moving(duration=0.2, loop=True),
-                on_stop=lambda dir: obj.reset_animations()) # XXX
+                on_stop=lambda dir: obj.reset_animations())
+        # I could be destroyed by bombs
         make_breakable(self, obj, 
                 on_die=lambda: self.game_reset())
+        # I can put bombs
         make_bomber(self, obj)
+
         self.map.add_node(obj, x, y, 0, -cell_size)
         return obj
 
-    ENEMY_NORMAL    = 0
-    ENEMY_BOMBEATER = 1
-    ENEMY_FLYING    = 2
-    ENEMY_BOMBER    = 3
-
-    def create_enemy_at(self, x, y, type):
-        if type == StageScene.ENEMY_NORMAL:
-            obj = self.create_enemy_normal_at(x, y)
-        elif type == StageScene.ENEMY_BOMBEATER:
-            obj = self.create_enemy_bombeater_at(x, y)
-        elif type == StageScene.ENEMY_FLYING:
-            obj = self.create_enemy_flying_at(x, y)
-        elif type == StageScene.ENEMY_BOMBER:
-            obj = self.create_enemy_bomber_at(x, y)
-        else:
-            pass    # should not come here
-
-        return obj
+    #
+    # Functions for enemy creation
+    #
 
     def create_enemy_normal_at(self, x, y):
         cell_size = self.map.get_cell_size()
@@ -220,16 +217,27 @@ class StageScene(Node):
         self.enemies = []
 
         while count > 0:
+            # Randomly select a cell
             x = int(random() * self.map_size[0])
             y = int(random() * self.map_size[1])
+
+            # If it has been filled with something, choose another cell
             if self.is_filled(x, y):
                 continue
 
+            # Randomly select a type of enemy to generate
             r = int(random() * 10)
             if 0 <= r and r < 5:
-                enemy = self.create_enemy_at(x, y, StageScene.ENEMY_NORMAL)
+                enemy = self.create_enemy_normal_at(x, y)
+            elif 5 < r and r < 8:
+                enemy = self.create_enemy_bombeater_at(x, y)
+            elif r == 8:
+                enemy = self.create_enemy_flying_at(x, y)
+            elif r == 9:
+                enemy = self.create_enemy_bomber_at(x, y)
             else:
-                enemy = self.create_enemy_at(x, y, StageScene.ENEMY_BOMBEATER)
+                # Should not reach here
+                pass
 
             # Create dummy objects to prevent enemies 
             # from concentrating at one place
@@ -351,16 +359,16 @@ class StageScene(Node):
                 elif c == 'o':
                     self.create_soft_block_at(x, y)
                 elif c == 'A':
-                    e = self.create_enemy_at(x, y, StageScene.ENEMY_NORMAL)
+                    e = self.create_enemy_normal_at(x, y)
                     self.enemies.append(e)
                 elif c == 'B':
-                    e = self.create_enemy_at(x, y, StageScene.ENEMY_BOMBEATER)
+                    e = self.create_enemy_bombeater_at(x, y)
                     self.enemies.append(e)
                 elif c == 'C':
-                    e = self.create_enemy_at(x, y, StageScene.ENEMY_FLYING)
+                    e = self.create_enemy_flying_at(x, y)
                     self.enemies.append(e)
                 elif c == 'D':
-                    e = self.create_enemy_at(x, y, StageScene.ENEMY_BOMBER)
+                    e = self.create_enemy_bomber_at(x, y)
                     self.enemies.append(e)
                 elif c == ' ':
                     pass

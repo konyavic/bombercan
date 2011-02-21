@@ -3,13 +3,14 @@
 
 """The topmost executable module of Bombercan."""
 
-import stagesetting
 from pnode import Game
 from menuscene import MenuScene
 from stagescene import StageScene
 from endscene import EndScene
 from printfps import printfps
 from audio import AudioManager
+
+import stagesetting
 
 class Bombercan(Game):
     """The main class of this game."""
@@ -43,15 +44,18 @@ class Bombercan(Game):
         self.game_reset()
 
     def game_reset(self):
+        # Show the main menu
         self.top_node=self.menu
         self.top_node.do_resize_recursive()
 
     def game_end(self):
+        # Show the end scene
         self.top_node=self.end
         self.top_node.do_resize_recursive()
 
     def game_start(self, mode, stage_num=4):
         if mode == 0:
+            # Setup and parse the next stage
             def _goto_next_stage():
                 if stage_num + 1 >= len(stagesetting.stage):
                     self.game_end()
@@ -73,6 +77,7 @@ class Bombercan(Game):
             self.stage.parse(settings['str'], settings['blocks'])
 
         elif mode == 1:
+            # Generate a stage
             self.stage = StageScene(
                     parent=self,
                     style={},
@@ -86,6 +91,7 @@ class Bombercan(Game):
                 )
             self.stage.generate(20, 60)
 
+        # Show the stage
         self.top_node=self.stage
         self.top_node.do_resize_recursive()
 

@@ -11,7 +11,7 @@ xxxxxxx
 x@.o Ax
 x.x xox
 xo    x
-x x x x
+x x xox
 x Ao Ax
 xxxxxxx
 """
@@ -34,18 +34,20 @@ xxxxxxxxxxxxxxxxxxx
 """
 
 stage.append({})
-stage[2]['size'] = (19, 11)
-stage[2]['blocks'] = 50
+stage[2]['size'] = (13, 13)
+stage[2]['blocks'] = 20
 stage[2]['str'] = """
-xxxxxxxxxxxxxxxxxxx
-xA       C       Ax
-x x x x x x x x x x
-x    A   o  oB    x
-x x x x x.x xox x x 
-x      o.@.o      x
-x x x x x.x x x x x
-x    A   o   A    x
-x x x x x x x x x x
-xB               Ax
-xxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxx
+x     x     x
+x x.x x x x x
+x .@. x  C  x
+x x.x x x x x
+xoooooxooooox
+x x x x x x x
+x  A  x  B  x
+x xox x x x x
+x  A  x  A  x
+xoxoxoxoxoxox
+x  A     B  x
+xxxxxxxxxxxxx
 """

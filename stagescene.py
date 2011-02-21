@@ -171,7 +171,7 @@ class StageScene(Node):
             obj.reset_transforms()
             obj.scale((0.5, 0.5), duration=2.0, cleanup=obj.die)
 
-        make_character(self, obj, speed=1.5, 
+        make_character(self, obj, speed=1.0, 
                 on_move=lambda dir: obj.play_moving(duration=1.0, loop=True),
                 on_stop=lambda dir: obj.reset_animations(),
                 on_go_die=_on_go_die)
@@ -424,7 +424,7 @@ class StageScene(Node):
         for target in self.map.get_cell_nodes(x, y):
             if is_bombeater(node) and is_bomb(target):
                 continue
-            elif is_flying(node):
+            elif is_flying(node) and not is_bomb(target):
                 continue
             elif is_block(target):
                 return True

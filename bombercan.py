@@ -36,7 +36,7 @@ class Bombercan(Game):
         self.top_node=self.menu
         self.top_node.do_resize_recursive()
 
-    def game_start(self, mode, stage_num=2):
+    def game_start(self, mode, stage_num=0):
         if mode == 0:
             settings = stagesetting.stage[stage_num]
             self.stage = StageScene(

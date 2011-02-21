@@ -16,6 +16,7 @@ FIRE            = 1 << 7
 DEAD            = 1 << 8
 ITEM            = 1 << 9
 BOMB_EATER      = 1 << 10
+FLYING          = 1 << 11
 
 def stageobj(flag, node):
     try:
@@ -278,4 +279,10 @@ def bombeater(node):
 
 def is_bombeater(node):
     return stageobj_has_flag(BOMB_EATER, node)
+
+def flying(node):
+    return stageobj(FLYING, node)
+
+def is_flying(node):
+    return stageobj_has_flag(FLYING, node)
 

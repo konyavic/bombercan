@@ -309,7 +309,7 @@ class Drop(Enemy):
                 width * (0.3 + 0.4 * phase), height * 0.05
                 )
         cr.close_path()
-        cr.set_source_rgba(0, 0, 1, 0.7)
+        cr.set_source_rgb(0, 0, 1)
         cr.fill_preserve()
         cr.set_source_rgb(0, 0, 0)
         cr.set_line_width(1.5)
@@ -318,6 +318,67 @@ class Drop(Enemy):
     def on_update(self, cr):
         self._draw(cr, 1)
         
+    @animation
+    def play_moving(self, cr, phase):
+        self._draw(cr, phase)
+
+class Ameba(Enemy):
+    def _draw(self, cr, phase):
+        width, height = self.width, self.height
+        phase = sin(phase * 2 * pi)
+
+        # Draw the shape
+        cr.move_to(width * 0.5, height * 0.05)
+        cr.curve_to(
+                width * (1.0 + 0.3 * phase), height * 0.05,
+                width * 0.5, height * 0.25,
+                width * 0.6, height * 0.4
+                )
+        cr.curve_to(
+                width * 0.75, height * 0.5,
+                width * 0.95, height * (0.0 - 0.3 * phase),
+                width * 0.95, height * 0.5
+                )
+        cr.curve_to(
+                width * 0.95, height * (1.0 + 0.3 * phase),
+                width * 0.75, height * 0.5,
+                width * 0.6, height * 0.6
+                )
+        cr.curve_to(
+                width * 0.5, height * 0.75,
+                width * (1.0 + 0.3 * phase), height * 0.95,
+                width * 0.5, height * 0.95
+                )
+        cr.curve_to(
+                width * (0.0 - 0.3 * phase), height * 0.95,
+                width * 0.5, height * 0.75,
+                width * 0.4, height * 0.6
+                )
+        cr.curve_to(
+                width * 0.25, height * 0.5,
+                width * 0.05, height * (1.0 + 0.3 * phase),
+                width * 0.05, height * 0.5
+                )
+        cr.curve_to(
+                width * 0.05, height * (0.0 - 0.3 * phase),
+                width * 0.25, height * 0.5,
+                width * 0.4, height * 0.4
+                )
+        cr.curve_to(
+                width * 0.5, height * 0.25,
+                width * (0.0 - 0.3 * phase), height * 0.05,
+                width * 0.5, height * 0.05
+                )
+        cr.close_path()
+        cr.set_source_rgb(0, 1, 0)
+        cr.fill_preserve()
+        cr.set_source_rgb(0, 0, 0)
+        cr.set_line_width(1.5)
+        cr.stroke()
+
+    def on_update(self, cr):
+        self._draw(cr, 1.0)
+
     @animation
     def play_moving(self, cr, phase):
         self._draw(cr, phase)

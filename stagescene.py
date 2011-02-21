@@ -84,12 +84,15 @@ class StageScene(Node):
 
     ENEMY_NORMAL    = 0
     ENEMY_BOMBEATER = 1
+    ENEMY_FLYING    = 2
 
     def create_enemy_at(self, x, y, type):
         if type == StageScene.ENEMY_NORMAL:
             obj = self.create_enemy_normal_at(x, y)
         elif type == StageScene.ENEMY_BOMBEATER:
             obj = self.create_enemy_bombeater_at(x, y)
+        elif type == StageScene.ENEMY_FLYING:
+            obj = self.create_enemy_flying_at(x, y)
 
         return obj
 
@@ -141,6 +144,35 @@ class StageScene(Node):
 
         make_character(self, obj, speed=3.0, 
                 on_move=lambda dir: obj.play_moving(duration=2, loop=True),
+                on_stop=lambda dir: obj.reset_animations(),
+                on_go_die=_on_go_die)
+        make_breakable(self, obj, 
+                on_die=lambda: self.enemies.remove(obj))
+        make_simpleai(self, obj)
+        self.map.add_node(obj, x, y, 0, 0)
+
+        return obj
+
+    def create_enemy_flying_at(self, x, y):
+        cell_size = self.map.get_cell_size()
+        obj = Ameba(
+                parent=self.map,
+                style={
+                    'width': cell_size, 
+                    'height': cell_size, 
+                    'z-index': layers['object'] }
+                )
+        enemy(obj)
+        flying(obj)
+        def _on_go_die():
+            obj.stop_ai()
+            obj.reset_animations()
+            obj.reset_actions()
+            obj.reset_transforms()
+            obj.scale((0.5, 0.5), duration=2.0, cleanup=obj.die)
+
+        make_character(self, obj, speed=1.5, 
+                on_move=lambda dir: obj.play_moving(duration=1.0, loop=True),
                 on_stop=lambda dir: obj.reset_animations(),
                 on_go_die=_on_go_die)
         make_breakable(self, obj, 
@@ -290,6 +322,9 @@ class StageScene(Node):
                 elif c == 'B':
                     e = self.create_enemy_at(x, y, StageScene.ENEMY_BOMBEATER)
                     self.enemies.append(e)
+                elif c == 'C':
+                    e = self.create_enemy_at(x, y, StageScene.ENEMY_FLYING)
+                    self.enemies.append(e)
                 elif c == ' ':
                     pass
 
@@ -388,6 +423,8 @@ class StageScene(Node):
         # Check individual nodes in the cell
         for target in self.map.get_cell_nodes(x, y):
             if is_bombeater(node) and is_bomb(target):
+                continue
+            elif is_flying(node):
                 continue
             elif is_block(target):
                 return True

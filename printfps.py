@@ -1,19 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""This module contains the printfps decorator."""
+
 from time import time
 from functools import wraps
 
 def printfps(second=1.0, counter=5):
-    """A decorator to output the avg. number of calls 
-    in a period on the function.
+    """A decorator to output the avg number of calls in a period.
 
-    Keyword arguments:
-
-    second -- the period to print fps
-
-    counter -- the number of counters 
-    (the average is taken on the total of all counters)
+    @param second: the period to print fps
+    @param counter: the number of counters 
+        (the average is taken on the total of all counters)
 
     """
     def _printfps(f):

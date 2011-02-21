@@ -459,6 +459,7 @@ class MessageBox(Node):
 
     def show(self, b):
         def show_animation(self, cr, phase):
+            print 'in'
             self._draw_box(cr,
                     self.width * 2 * min(0.5, phase), 
                     self.height * 2 * max(0.05, phase - 0.5), 

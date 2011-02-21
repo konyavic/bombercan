@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""This module contains the class EndScene only."""
+"""This module contains the game scene 'EndScene'."""
 
 import gtk
 import gtk.gdk as gdk
@@ -15,16 +15,18 @@ from effects import *
 from motions import *
 
 class EndScene(Node):
+    """The game scene to display the end roll."""
     def __init__(self, parent, style, key_down, key_up, on_game_reset):
         super(EndScene, self).__init__(parent, style)
 
-        # Receive class audio, funtion key_up() and key_down() from class Game
-        # to check player's input
+        # Same as in MenuScene
         self.key_up = key_up
         self.key_down = key_down
 
+        # Function on_game_reset() is called to return to the main menu
         self.on_game_reset = on_game_reset
 
+        # "Thank You"
         list = Selections(
                 parent=self,
                 style={'height': '30%', 'top': '15%', 'left': '5%', 'right': '5%'},
@@ -38,6 +40,8 @@ class EndScene(Node):
                 cursor=None,
                 )
         self.add_node(list)
+        
+        # Staff
         list = Selections(
                 parent=self,
                 style={'height': '30%', 'top': '60%', 'left': '10%', 'right': '10%'},
@@ -62,6 +66,6 @@ class EndScene(Node):
         cr.paint()
 
     def on_tick(self, interval):
-        # Back to main menu
         if self.key_up('space'):
+            # Back to the main menu
             self.on_game_reset()

@@ -44,19 +44,26 @@ class Bombercan(Game):
         self.game_reset()
 
     def game_reset(self):
-        # Show the main menu
+        """Show the main menu."""
         self.top_node=self.menu
         self.top_node.do_resize_recursive()
 
     def game_end(self):
-        # Show the end scene
+        """Show the end roll."""
         self.top_node=self.end
         self.top_node.do_resize_recursive()
 
     def game_start(self, mode, stage_num=0):
+        """Setup the stage to start the game.
+        
+        @param mode: 0 for story mode, 1 for free game
+        @param stage_num: specify the number of stage in story mode
+
+        """
         if mode == 0:
-            # Setup and parse the next stage
             def _goto_next_stage():
+                # After the player won this stage, start the next stage,
+                # or show the end roll if all stage are cleared.
                 if stage_num + 1 >= len(stagesetting.stage):
                     self.game_end()
                 else:
@@ -74,10 +81,11 @@ class Bombercan(Game):
                     on_game_reset=self.game_reset,
                     on_game_win=_goto_next_stage
                 )
+
+            # Parse the setting
             self.stage.parse(settings['str'], settings['blocks'])
 
         elif mode == 1:
-            # Generate a stage
             self.stage = StageScene(
                     parent=self,
                     style={},
@@ -89,6 +97,8 @@ class Bombercan(Game):
                     on_game_reset=self.game_reset,
                     on_game_win=self.game_reset
                 )
+
+            # Randomly generate a stage
             self.stage.generate(20, 60)
 
         # Show the stage

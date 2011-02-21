@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""This module contains the class MenuScene only."""
+"""This module contains the game scene 'MenuScene'."""
 
 import gtk
 import gtk.gdk as gdk
@@ -17,14 +17,11 @@ from motions import *
 class MenuScene(Node):
     """The game scene that display the main menu from game start."""
     def __init__(self, parent, style, audio, key_down, key_up, on_game_start):
-        """Create and put the components for the title, 
-        the main menu, etc.
-        
-        """
+        """Create and put the components."""
         super(MenuScene, self).__init__(parent, style)
 
-        # Receive class audio, funtion key_up() and key_down() from class Game
-        # to check player's input
+        # Receive class AudioManager, funtion key_up() and key_down() 
+        # from class Game to play music and check player's input
         self.audio = audio
         self.key_up = key_up
         self.key_down = key_down
@@ -32,7 +29,7 @@ class MenuScene(Node):
         # Function on_game_start() is called if the player selected the menu
         self.on_game_start = on_game_start
 
-        # The selection menu
+        # The selection menu component
         self.cursor = Bomb(parent=self, style={})
         self.sel = Selections(
                 parent=self,
@@ -65,7 +62,8 @@ class MenuScene(Node):
                 )
         self.add_node(title)
 
-        # A smoke effect just for the demonstration of my particle system
+        # A smoke effect displayed just for the demonstration 
+        # of the particle system
         particle = ParticleEffect(self, 
                 {
                     'width': '50%', 
@@ -119,16 +117,18 @@ class MenuScene(Node):
         
         """
         if self.key_up('Up'):
+            self.audio.play('select.wav')
             self.sel.select_up()
-            self.audio.play('select.wav')
         elif self.key_up('Down'):
-            self.sel.select_down()
             self.audio.play('select.wav')
+            self.sel.select_down()
 
-        # A menu item is selected
+        # A menu item has been selected
         if self.key_up('space'):
             if self.sel.selected == 0:
+                # Start story mode
                 self.on_game_start(0)
             elif self.sel.selected == 1:
+                # Start free game
                 self.on_game_start(1)
 

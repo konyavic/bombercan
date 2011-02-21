@@ -1,9 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""The core module.
+"""The base system.
 
-There are only two core classes: Node and Game.
+There are only two core classes in this module: Node and Game.
+
 """
 
 from math import sqrt

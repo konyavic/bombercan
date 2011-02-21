@@ -46,9 +46,9 @@ class EndScene(Node):
                     u'<Press Space>',
                     u' ',
                     u'Program:',
-                    u'李承益 (Victor Lee)',
+                    u' 李 承益 (Victor Lee)',
                     u'Bombercan\'s Theme:',
-                    u'沈威廷 (MWT)'
+                    u' 沈 威廷 (MWT)'
                     ),
                 color=(1, 1, 1, 0.7),
                 margin=(0, 0, 0, 0),

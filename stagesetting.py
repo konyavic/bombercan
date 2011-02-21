@@ -82,15 +82,15 @@ stage[4]['str'] = """
 xxxxxxxxxxxxxxxxxxxxxxx
 x  .       .       .  x
 x xDx x x xDx x x xDx x
-x  .       .       .  x
+x  .     A . A     .  x
 x x x x xoxoxox x x x x
-x       o     o       x
+x    A  o     o  A    x
 x x.x x x x.x x x x x x
-x  D    o .@. o       x
+x .D.   o .@. o   .D. x
 x x.x x x x.x x x x x x
-x       o     o       x
+x    A  o     o  A    x
 x x x x xoxoxox x x x x
-x  .       .       .  x
+x  .     A . A     .  x
 x xDx x x xDx x x xDx x
 x  .       .       .  x
 xxxxxxxxxxxxxxxxxxxxxxx

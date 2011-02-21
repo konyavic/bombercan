@@ -53,7 +53,7 @@ class Bombercan(Game):
         self.top_node=self.end
         self.top_node.do_resize_recursive()
 
-    def game_start(self, mode, stage_num=4):
+    def game_start(self, mode, stage_num=0):
         if mode == 0:
             # Setup and parse the next stage
             def _goto_next_stage():

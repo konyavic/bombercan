@@ -119,8 +119,7 @@ class StageScene(Node):
                 on_move=lambda dir: obj.rotate(duration=2, loop=True),
                 on_stop=lambda dir: obj.reset_animations(),
                 on_go_die=_on_go_die)
-        make_breakable(self, obj, 
-                on_die=lambda: self.enemies.remove(obj))
+        make_breakable(self, obj)
         make_simpleai(self, obj)
         self.map.add_node(obj, x, y, 0, 0)
 
@@ -148,8 +147,7 @@ class StageScene(Node):
                 on_move=lambda dir: obj.play_moving(duration=2, loop=True),
                 on_stop=lambda dir: obj.reset_animations(),
                 on_go_die=_on_go_die)
-        make_breakable(self, obj, 
-                on_die=lambda: self.enemies.remove(obj))
+        make_breakable(self, obj)
         make_simpleai(self, obj)
         self.map.add_node(obj, x, y, 0, 0)
 
@@ -177,8 +175,7 @@ class StageScene(Node):
                 on_move=lambda dir: obj.play_moving(duration=1.0, loop=True),
                 on_stop=lambda dir: obj.reset_animations(),
                 on_go_die=_on_go_die)
-        make_breakable(self, obj, 
-                on_die=lambda: self.enemies.remove(obj))
+        make_breakable(self, obj)
         make_simpleai(self, obj)
         self.map.add_node(obj, x, y, 0, 0)
 
@@ -206,8 +203,7 @@ class StageScene(Node):
                 on_stop=lambda dir: obj.reset_animations(),
                 on_go_die=_on_go_die)
         make_bomber(self, obj, bomb_power=1)
-        make_breakable(self, obj, 
-                on_die=lambda: self.enemies.remove(obj))
+        make_breakable(self, obj)
         make_bomberai(self, obj)
         self.map.add_node(obj, x, y, 0, -cell_size)
 
@@ -338,8 +334,6 @@ class StageScene(Node):
         self.create_soft_blocks(n_blocks)        
         self.clear_dummy_obj()
 
-        self._mark_destroy = set()
-
     def parse(self, stage_str, n_blocks):
         self.enemies = []
         self.create_map()
@@ -375,7 +369,6 @@ class StageScene(Node):
 
         self.create_soft_blocks(n_blocks)        
         self.clear_dummy_obj()
-        self._mark_destroy = set()
 
     def on_update(self, cr):
         scale_width = self.width / float(self.texture['bgimg'].get_width())
@@ -416,12 +409,6 @@ class StageScene(Node):
         # XXX: move to character check()
         #
 
-        # Real destroy of marked nodes
-        for n in self._mark_destroy:
-            n.die()
-
-        self._mark_destroy = set()
-
         # Check the losing condition
         cell = self.map.get_cell(self.player)
         for n in self.map.get_cell_nodes(*cell):
@@ -433,11 +420,13 @@ class StageScene(Node):
                 n.eat(self.player)
 
         # Check enemies
-        for e in self.enemies:
+        tmp = self.enemies
+        for e in tmp:
             cell = self.map.get_cell(e)
             for n in self.map.get_cell_nodes(*cell):
                 if is_fire(n) and not is_dead(n):
                     e.go_die()
+                    self.enemies.remove(e)
                     break
                 elif is_bombeater(e) and is_bomb(n):
                     n.bomber.cur_bomb_count -= 1
@@ -627,8 +616,9 @@ class StageScene(Node):
                     n.die()
                 elif is_character(n) and not is_dead(n):
                     n.go_die()
+                    if is_enemy(n):
+                        self.enemies.remove(n)
                 elif is_breakable(n):
-                    #self._mark_destroy.add(n)
                     n.die()
                     return (True, 0)
 

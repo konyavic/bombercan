@@ -125,6 +125,10 @@ class MenuScene(Node):
             self.sel.select_down()
             self.audio.play('select.wav')
 
+        # A menu item is selected
         if self.key_up('space'):
-            self.on_game_start()
+            if self.sel.selected == 0:
+                self.on_game_start(0)
+            elif self.sel.selected == 1:
+                self.on_game_start(1)
 

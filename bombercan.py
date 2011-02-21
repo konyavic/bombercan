@@ -13,43 +13,60 @@ from audio import AudioManager
 class Bombercan(Game):
     """The main class of this game."""
     def __init__(self):
-        """Create MenuScene and StageScene and connect them."""
+        """Create the main menu."""
         super(Bombercan, self).__init__('BomberCan', 500, 500, 80)
 
-        audio = AudioManager()
-        audio.play('bombercan.wav', loop=True)
-
-        def game_start():
-            self.top_node=self.stage
-            self.top_node.do_resize_recursive()
-
-        def game_reset():
-            self.top_node=self.menu
-            self.top_node.do_resize_recursive()
-            self.stage = StageScene(
-                    parent=self,
-                    style={},
-                    audio=audio,
-                    map_size=(15, 15), 
-                    #map_size=(7, 7), 
-                    margin=(20, 20, 20, 20),
-                    key_up=self.key_up,
-                    key_down=self.key_down,
-                    on_game_reset=game_reset
-                )
-            self.stage.generate(20, 60)
-            #self.stage.parse(stagesetting.stage_1, 3, 7)
-
+        # Play BGM
+        self.audio = AudioManager()
+        self.audio.play('bombercan.wav', loop=True)
+            
+        # Display the main menu
         self.menu = MenuScene(
                 parent=self,
                 style={},
-                audio=audio,
+                audio=self.audio,
                 key_up=self.key_up,
                 key_down=self.key_down,
-                on_game_start=game_start
+                on_game_start=self.game_start
                 )
 
-        game_reset()
+        self.game_reset()
+
+    def game_reset(self):
+        self.top_node=self.menu
+        self.top_node.do_resize_recursive()
+
+    def game_start(self, mode, stage_num=0):
+        if mode == 0:
+            settings = stagesetting.stage[stage_num]
+            self.stage = StageScene(
+                    parent=self,
+                    style={},
+                    audio=self.audio,
+                    map_size=settings['size'], 
+                    margin=(20, 20, 20, 20),
+                    key_up=self.key_up,
+                    key_down=self.key_down,
+                    on_game_reset=self.game_reset,
+                    on_game_win=lambda: self.game_start(0, stage_num + 1)
+                )
+            self.stage.parse(settings['str'], settings['blocks'])
+        elif mode == 1:
+            self.stage = StageScene(
+                    parent=self,
+                    style={},
+                    audio=self.audio,
+                    map_size=(15, 15), 
+                    margin=(20, 20, 20, 20),
+                    key_up=self.key_up,
+                    key_down=self.key_down,
+                    on_game_reset=self.game_reset,
+                    on_game_win=self.game_reset
+                )
+            self.stage.generate(20, 60)
+
+        self.top_node=self.stage
+        self.top_node.do_resize_recursive()
 
     @printfps()
     def on_tick(self, interval):

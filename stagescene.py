@@ -91,13 +91,6 @@ class StageScene(Node):
         elif type == StageScene.ENEMY_BOMBEATER:
             obj = self.create_enemy_bombeater_at(x, y)
 
-        # Create dummy objects to prevent enemies 
-        # from concentrating at one place
-        self.create_dummy_obj_at(x - 1, y)
-        self.create_dummy_obj_at(x + 1, y)
-        self.create_dummy_obj_at(x, y - 1)
-        self.create_dummy_obj_at(x, y + 1)
-
         return obj
 
     def create_enemy_normal_at(self, x, y):
@@ -166,8 +159,19 @@ class StageScene(Node):
             if self.is_filled(x, y):
                 continue
 
-            #enemy = self.create_enemy_at(x, y, StageScene.ENEMY_NORMAL)
-            enemy = self.create_enemy_at(x, y, StageScene.ENEMY_BOMBEATER)
+            r = int(random() * 10)
+            if 0 <= r and r < 5:
+                enemy = self.create_enemy_at(x, y, StageScene.ENEMY_NORMAL)
+            else:
+                enemy = self.create_enemy_at(x, y, StageScene.ENEMY_BOMBEATER)
+
+            # Create dummy objects to prevent enemies 
+            # from concentrating at one place
+            self.create_dummy_obj_at(x - 1, y)
+            self.create_dummy_obj_at(x + 1, y)
+            self.create_dummy_obj_at(x, y - 1)
+            self.create_dummy_obj_at(x, y + 1)
+
             self.enemies.append(enemy)
             count -= 1
 
@@ -231,7 +235,8 @@ class StageScene(Node):
         self.dummies = []
 
     def __init__(self, parent, style, 
-            audio, map_size, margin, key_up, key_down, on_game_reset):
+            audio, map_size, margin, key_up, key_down, 
+            on_game_reset, on_game_win):
 
         super(StageScene, self).__init__(parent, style)
         self.audio = audio
@@ -240,13 +245,13 @@ class StageScene(Node):
         self.key_up = key_up
         self.key_down = key_down
         self.game_reset = on_game_reset
+        self.game_win = on_game_win
 
         self.texture = {}
         self.texture['bgimg'] = cairo.ImageSurface.create_from_png('stage_bg.png')
 
     def generate(self, n_enemies, n_blocks):
-        """Randomly generate a new stage.
-        """
+        """Randomly generate a new stage."""
         self.create_map()
         self.create_floor()
         self.player = self.create_player_at(0, 0)
@@ -261,7 +266,8 @@ class StageScene(Node):
 
         self._mark_destroy = set()
 
-    def parse(self, stage_str, n_enemies, n_blocks):
+    def parse(self, stage_str, n_blocks):
+        self.enemies = []
         self.create_map()
         self.create_floor()
 
@@ -278,13 +284,17 @@ class StageScene(Node):
                     self.create_dummy_obj_at(x, y)
                 elif c == 'o':
                     self.create_soft_block_at(x, y)
+                elif c == 'A':
+                    e = self.create_enemy_at(x, y, StageScene.ENEMY_NORMAL)
+                    self.enemies.append(e)
+                elif c == 'B':
+                    e = self.create_enemy_at(x, y, StageScene.ENEMY_BOMBEATER)
+                    self.enemies.append(e)
                 elif c == ' ':
                     pass
 
-        self.create_enemies(n_enemies)
         self.create_soft_blocks(n_blocks)        
         self.clear_dummy_obj()
-
         self._mark_destroy = set()
 
     def on_update(self, cr):
@@ -356,7 +366,7 @@ class StageScene(Node):
 
         # Check the winning condition
         if len(self.enemies) == 0:
-            self.game_reset()
+            self.game_win()
 
     def is_filled(self, x, y):
         if not (0 <= x and x < self.map_size[0]
@@ -391,6 +401,7 @@ class StageScene(Node):
     def move_object(self, node, dx, dy):
         """Check the target cell whether it is blocked or not,
         and move the object in the map.
+        
         Some adjustion is applied to make the turning smoother.
 
         """
@@ -434,7 +445,8 @@ class StageScene(Node):
 
     def put_bomb(self, x, y, delay, power, bomber):
         """Create a bomb at the specified cell.
-        Called by bomber.
+
+        Should be called by bomber.
 
         """
         nodes = self.map.get_cell_nodes(x, y)

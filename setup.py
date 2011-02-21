@@ -21,6 +21,8 @@ setup(
             'stage_bg.png',
             'menu_bg.png',
             'bombercan.wav',
-            'explode.wav'
+            'explode.wav',
+            'kan.wav',
+            'select.wav',
             ]
         )

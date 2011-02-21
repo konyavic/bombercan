@@ -335,7 +335,8 @@ class Label(Node):
 class Selections(Node):
     """The menu that has several selections."""
     def __init__(self, parent, style, 
-            labels, font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), cursor=None):
+            labels, font='', color=(0, 0, 0, 1), bgcolor=(0, 0, 0, 0), 
+            margin=(10, 10, 10, 10), cursor=None, center=True):
         """Initialize the menu.
         
         Arguments:
@@ -348,7 +349,11 @@ class Selections(Node):
         
         bgcolor -- the rgba value of background color
 
+        margin -- the margin of each label
+
         cursor -- the object to be used as the cursor
+
+        center -- center the text
 
         """
 
@@ -370,14 +375,19 @@ class Selections(Node):
             text=self.labels[i],
             color=self.color,
             font=self.font,
-            center=True
+            margin=margin,
+            center=center
             ) for i in range(0, len(self.labels)) ]
 
         for label in self._labels:
             self.add_node(label)
 
-        self.cursor = cursor
-        self.add_node(cursor)
+        if cursor:
+            self.cursor = cursor
+            self.add_node(cursor)
+        else:
+            self.cursor = None
+
         self.select(0)
 
     def on_update(self, cr):
@@ -399,12 +409,13 @@ class Selections(Node):
         Also make the selected text shake.
         """
         self.selected = i
-        self.cursor.set_style({
-            'top': self._labels[i].y,
-            'left': self._labels[i].x - self._labels[i].height,
-            'width': self._labels[i].height,
-            'height': self._labels[i].height,
-            })
+        if self.cursor:
+            self.cursor.set_style({
+                'top': self._labels[i].y,
+                'left': self._labels[i].x - self._labels[i].height,
+                'width': self._labels[i].height,
+                'height': self._labels[i].height}
+                )
 
         # XXX: "shake" should be merged into motions
         def _shake(self, interval, phase):

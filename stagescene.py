@@ -205,7 +205,7 @@ class StageScene(Node):
             obj.rotate(duration=0.5, cleanup=obj.die)
 
         make_character(self, obj, speed=3.0, 
-                on_move=lambda dir: obj.play_moving(duration=1.0, loop=True),
+                on_move=lambda dir: obj.play_moving(duration=0.2, loop=True),
                 on_stop=lambda dir: obj.reset_animations(),
                 on_go_die=_on_go_die)
         make_bomber(self, obj, bomb_power=1)
@@ -620,7 +620,8 @@ class StageScene(Node):
                 elif is_character(n) and not is_dead(n):
                     n.go_die()
                 elif is_breakable(n):
-                    self._mark_destroy.add(n)
+                    #self._mark_destroy.add(n)
+                    n.die()
                     return (True, 0)
 
             return (False, 0)

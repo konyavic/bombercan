@@ -7,6 +7,7 @@ import stagesetting
 from pnode import Game
 from menuscene import MenuScene
 from stagescene import StageScene
+from endscene import EndScene
 from printfps import printfps
 from audio import AudioManager
 
@@ -30,14 +31,33 @@ class Bombercan(Game):
                 on_game_start=self.game_start
                 )
 
+        # Prepare the end scene
+        self.end = EndScene(
+                parent=self,
+                style={},
+                key_up=self.key_up,
+                key_down=self.key_down,
+                on_game_reset=self.game_reset
+                )
+
         self.game_reset()
 
     def game_reset(self):
         self.top_node=self.menu
         self.top_node.do_resize_recursive()
 
+    def game_end(self):
+        self.top_node=self.end
+        self.top_node.do_resize_recursive()
+
     def game_start(self, mode, stage_num=4):
         if mode == 0:
+            def _goto_next_stage():
+                if stage_num + 1 >= len(stagesetting.stage):
+                    self.game_end()
+                else:
+                    self.game_start(0, stage_num + 1)
+
             settings = stagesetting.stage[stage_num]
             self.stage = StageScene(
                     parent=self,
@@ -48,9 +68,10 @@ class Bombercan(Game):
                     key_up=self.key_up,
                     key_down=self.key_down,
                     on_game_reset=self.game_reset,
-                    on_game_win=lambda: self.game_start(0, stage_num + 1)
+                    on_game_win=_goto_next_stage
                 )
             self.stage.parse(settings['str'], settings['blocks'])
+
         elif mode == 1:
             self.stage = StageScene(
                     parent=self,

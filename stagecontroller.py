@@ -202,6 +202,50 @@ def make_simpleai(stage, node, timeout=1.0):
     node.stop_ai = instancemethod(stop_ai, node)
     return node
 
+def make_bomberai(stage, node, timeout=1.0):
+    node.ai_timecount=timeout * random()
+    node.ai_old_pos = (node.x, node.y)
+    node.is_ai_stopped = False
+
+    def on_tick(self, interval):
+        # XXX: need more adjustment
+        if self.is_ai_stopped:
+            return
+
+        self.ai_timecount += interval
+        if (self.ai_timecount < timeout):
+            return
+        
+        self.ai_timecount = 0.0
+        self.ai_old_pos = (node.x, node.y)
+        if random() > 0.5:
+            self.bomb()
+            if len(self.dir_queue) > 0:
+                dir = self.dir_queue[0]
+                if dir == 'up': 
+                    dir = 'down'
+                elif dir == 'down': 
+                    dir = 'up'
+                elif dir == 'right': 
+                    dir = 'left'
+                elif dir == 'left': 
+                    dir = 'right'
+            else:
+                dir = ['up', 'down', 'left', 'right'][int(random() * 4)]
+            self.stop()
+            self.move(dir)
+        else:
+            dir = ['up', 'down', 'left', 'right'][int(random() * 4)]
+            self.stop()
+            self.move(dir)
+
+    def stop_ai(self):
+        self.is_ai_stopped = True
+
+    node.on_tick = instancemethod(on_tick, node)
+    node.stop_ai = instancemethod(stop_ai, node)
+    return node
+
 def make_trackingfloor(stage, node, x, y, on_enter, on_leave):
     node.entered = False
 

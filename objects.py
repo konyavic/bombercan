@@ -23,7 +23,7 @@ class Bomb(Node):
         super(Bomb, self).__init__(parent, style)
         use_basic_motions(self)
 
-    def __draw(self, cr):
+    def _draw(self, cr):
         width = self.width
         height = self.height
 
@@ -52,7 +52,7 @@ class Bomb(Node):
         cr.stroke()
 
     def on_update(self, cr):
-        self.__draw(cr)
+        self._draw(cr)
 
     def count(self):
         """Play the animtion when it is counting down."""
@@ -117,7 +117,7 @@ class SoftBlock(Node):
         cr.stroke()
 
 class Can(Node):
-    def __draw_feet(self, cr, x, y, inverse=1):
+    def _draw_feet(self, cr, x, y, inverse=1):
         width, height = self.width, self.height
         cr.move_to(x, y)
         cr.rel_line_to(0, height * 0.13)
@@ -135,7 +135,7 @@ class Can(Node):
         cr.set_line_width(1)
         cr.stroke()
 
-    def __draw_cylinder(self, cr, x, y, cylinder_height, color):
+    def _draw_cylinder(self, cr, x, y, cylinder_height, color):
         width, height = self.width, self.height
         cr.move_to(x, y)
         cr.rel_curve_to(
@@ -168,7 +168,7 @@ class Can(Node):
         cr.set_line_width(1)
         cr.stroke()
 
-    def __draw_eyes(self, cr):
+    def _draw_eyes(self, cr):
         width, height = self.width, self.height
         cr.save()
         cr.scale(1, 0.5)
@@ -205,14 +205,14 @@ class Can(Node):
         cr.save()
         cr.set_line_join(cairo.LINE_JOIN_BEVEL)
         # Draw feets
-        self.__draw_feet(cr, width * 0.3, height * 0.8)
-        self.__draw_feet(cr, width * (1 - 0.3), height * 0.8, -1)
+        self._draw_feet(cr, width * 0.3, height * 0.8)
+        self._draw_feet(cr, width * (1 - 0.3), height * 0.8, -1)
         # Draw body
-        self.__draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0, 0, 0.7))
+        self._draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0, 0, 0.7))
         # Draw head
-        self.__draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.7, 0.7, 0.7))
+        self._draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.7, 0.7, 0.7))
         # Draw eyes
-        self.__draw_eyes(cr)
+        self._draw_eyes(cr)
         cr.restore()
 
     @animation
@@ -228,14 +228,53 @@ class Can(Node):
         cr.save()
         cr.set_line_join(cairo.LINE_JOIN_BEVEL)
         # Draw feets
-        self.__draw_feet(cr, width * 0.3, height * 0.8 + delta)
-        self.__draw_feet(cr, width * (1 - 0.3), height * 0.8 - delta, -1)
+        self._draw_feet(cr, width * 0.3, height * 0.8 + delta)
+        self._draw_feet(cr, width * (1 - 0.3), height * 0.8 - delta, -1)
         # Draw body
-        self.__draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0, 0, 0.7))
+        self._draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0, 0, 0.7))
         # Draw head
-        self.__draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.7, 0.7, 0.7))
+        self._draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.7, 0.7, 0.7))
         # Draw eyes
-        self.__draw_eyes(cr)
+        self._draw_eyes(cr)
+        cr.restore()
+
+class BadCan(Can):
+    def __init__(self, parent, style):
+        super(BadCan, self).__init__(parent, style)
+        use_basic_motions(self)
+
+    def on_update(self, cr):
+        width, height = self.width, self.height
+        cr.save()
+        cr.set_line_join(cairo.LINE_JOIN_BEVEL)
+        # Draw feets
+        self._draw_feet(cr, width * 0.3, height * 0.8)
+        self._draw_feet(cr, width * (1 - 0.3), height * 0.8, -1)
+        # Draw body
+        self._draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0.2, 0.2, 0.2))
+        # Draw head
+        self._draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.3, 0.3, 0.3))
+        # Draw eyes
+        self._draw_eyes(cr)
+        cr.restore()
+
+    @animation
+    def play_moving(self, cr, phase):
+        """Same with play_moving() in class Can."""
+        width, height = self.width, self.height
+        delta = height * 0.05 * cos(phase * pi * 2)
+
+        cr.save()
+        cr.set_line_join(cairo.LINE_JOIN_BEVEL)
+        # Draw feets
+        self._draw_feet(cr, width * 0.3, height * 0.8 + delta)
+        self._draw_feet(cr, width * (1 - 0.3), height * 0.8 - delta, -1)
+        # Draw body
+        self._draw_cylinder(cr, width * 0.2, height * 0.8, height * 0.3, (0.2, 0.2, 0.2))
+        # Draw head
+        self._draw_cylinder(cr, width * 0.2, height * 0.5, height * 0.2, (0.3, 0.3, 0.3))
+        # Draw eyes
+        self._draw_eyes(cr)
         cr.restore()
 
 class Enemy(Node):

@@ -18,14 +18,11 @@ class ExplosionEffect(Node):
     def __init__(self, parent, style, fire, get_cell_size, on_die):
         """Initialize this effect.
         
-        Arguments:
-
-        fire -- a list of the length of four fire arms (top, right, down, left)
-
-        get_cell_size -- a function that returns the cell size 
-        (should be MapContainer.get_cell_size())
-
-        on_die -- the callback function which is called when this effect ends
+        @param fire: representing the length of four fire arms (top, right, down, left)
+        @type fire: a list of four integers 
+        @param get_cell_size: the callback function that always returns the cell size 
+            (should be MapContainer.get_cell_size())
+        @param on_die: the callback function called when the effect ends
 
         """
         super(ExplosionEffect, self).__init__(parent, style)
@@ -73,33 +70,21 @@ class ParticleEffect(Node):
             max_amount=0, initial_amount=0, spawn_interval=0.0):
         """Initilize this particle system.
 
-        Arguments:
-
-        size -- the size of one particle
-        
-        color -- the rgba value of the initial color for each particle
-
-        v_color -- the vector for the change of color
-
-        center -- the position to spawn new particles (relative position)
-
-        velocity -- the velocity of each particle
-
-        velocity_deviation -- the deviation of initial velocity of each paricle
-
-        lifetime -- the life of each particle (in second)
-
-        v_size -- the change of size
-
-        size_deviation -- the deviation of initial size of each particle
-
-        accel -- the acceleration
-
-        max_amount -- the max number of particles
-
-        initial_amount -- the initial number of particles
-
-        spawn_interval -- the period to spawn new particles
+        @param size: the size of one particle
+        @param color: the rgba value of the initial color for each particle
+        @param v_color: the vector for the change of color
+        @param center: the position to spawn new particles 
+            (in relative position, eg. (0.5, 0.5) represents the center of object)
+        @param velocity: the velocity of each particle
+        @param velocity_deviation: the deviation of initial velocity 
+            of each paricle
+        @param lifetime: the life of each particle (in second)
+        @param v_size: the change of size
+        @param size_deviation: the deviation of initial size of each particle
+        @param accel: the acceleration
+        @param max_amount: the max number of particles
+        @param initial_amount: the initial number of particles
+        @param spawn_interval: the period to spawn new particles
 
         """
 

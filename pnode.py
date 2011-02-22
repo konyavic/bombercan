@@ -1,9 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""The base system.
+"""The pnode framework.
 
-There are only two core classes in this module: Node and Game.
+There are only two core classes in this framework: Node and Game.
 
 """
 
@@ -118,6 +118,7 @@ def animation(f):
     return _animation
 
 class Node(object):
+    """The basic element in the pnode framework."""
     def __init__(self, parent, style):
         """Initialized the node.
         
@@ -576,7 +577,14 @@ class Node(object):
                 queue.append(node)
 
 class Game(object):
+    """The application class in pnode framework."""
     def __init__(self, title, width, height, fps):
+        """Initialize the game.
+        
+        @param title: the title of window
+        @param fps: the desired fps
+
+        """
         self.title = title
         self.width = width
         self.height = height
@@ -589,20 +597,36 @@ class Game(object):
         self.__next_keymap = set()
 
     def quit(self):
+        """Quit from game."""
         self.__quit = True
 
     def key_up(self, keyname):
+        """Return true if the specified key is released.
+        
+        It returns true only at the instance of releasing the key.
+
+        """
         key = gdk.keyval_from_name(keyname)
         return not (key in self.__keymap) and (key in self.__next_keymap)
 
     def key_down(self, keyname):
+        """Return true if the specified key is pressed.
+
+        It returns true only at the instance of pressing the key.
+
+        """
         key = gdk.keyval_from_name(keyname)
         return (key in self.__keymap) and not (key in self.__next_keymap)
 
     def on_tick(self, interval):
+        """Overload this function to do things in each tick."""
         pass
         
     def do_expose(self, widget, event):
+        """The expose function used in gtk framework.
+        
+        Call do_update_recursive() on top node to update all nodes.
+        """
         try:
             cr = widget.window.cairo_create()
             self.top_node.do_update_recursive(cr, 0, 0, self.interval)
@@ -610,21 +634,22 @@ class Game(object):
             self.quit()
 
     def do_timeout(self):
+        """The actual 'tick'."""
         try:
             if self.__quit:
                 gtk.main_quit()
 
-            # calculate elapsed time
+            # Calculate elapsed time
             last_time = time()
             self.interval = last_time - self.cur_time
             self.cur_time = last_time
-            # handle input and timer events
+            # Handle time events
             self.on_tick(self.interval)
-            # handle timer events of nodes
+            # Handle time events of nodes
             self.top_node.do_tick_recursive(self.interval)
-            # take a snapshot of the lastest state of keymap
+            # Take a snapshot of the lastest state of keymap
             self.__keymap = self.__next_keymap.copy()
-            # handle frame update
+            # Handle frame update
             self.area.queue_draw()
         except KeyboardInterrupt:
             self.quit()
@@ -632,11 +657,19 @@ class Game(object):
         return True
 
     def do_key_press(self, widget, event):
+        """The function handling key-press-event.
+        
+        Record the state of key.
+        """
         key = event.keyval
         self.__next_keymap.add(key)
         return True
 
     def do_key_release(self, widget, event):
+        """The function handling key-release-event.
+        
+        Record the state of key.
+        """
         key = event.keyval
         if key in self.__next_keymap:
             self.__next_keymap.remove(key)
@@ -644,11 +677,17 @@ class Game(object):
         return True
 
     def do_resize(self, widget, allocation):
+        """The function handling resize in gtk framework.
+        
+        Call do_resize_recursive() on top node to resize all nodes.
+
+        """
         self.width = allocation.width
         self.height = allocation.height
         self.top_node.do_resize_recursive()
 
     def run(self):
+        """The main loop of the game."""
         self.cur_time = time()
         self.interval = 0
 

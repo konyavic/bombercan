@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""This module contains objects that handle graphics only 
+"""This module contains objects that deal with graphics only 
 (including animations).
 
 """

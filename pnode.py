@@ -16,16 +16,27 @@ import gtk.gdk as gdk
 import gobject
 import cairo
 
-_style_key = ['width', 'height', 'left', 'top', 'right', 'bottom', 'aspect', 'align', 'vertical-align', 'z-index']
+# The keywords for style, the order stands for the priority of evaluation
+_style_key = ['width', 'height', 'left', 'top', 'right', 
+    'bottom', 'aspect', 'align', 'vertical-align', 'z-index']
 _style_key_prio = dict([(_style_key[i], i) for i in range(0, len(_style_key))])
 
 def style_key_prio(key):
+    """Get the priority of this keyword."""
     if key in _style_key:
         return _style_key_prio[key]
     else:
         return len(_style_key)
 
 def parse_value(value, rel):
+    """Parse the value of keyword.
+    
+    Three types are allowed:
+        - integer
+        - a string representing percentage, eg. '20%'
+        - a plain string, eg. 'center'
+
+    """
     if value.__class__ is str:
         value = value.strip()
         if value[-1] is '%':
@@ -36,6 +47,7 @@ def parse_value(value, rel):
         return value
 
 def evaluate_style(node, style):
+    """Evaluate the style."""
     # defaults
     node.x = 0
     node.y = 0
@@ -97,8 +109,7 @@ def evaluate_style(node, style):
             node.z_index = int(value)
 
 def animation(f):
-    """Decorator for animation
-    """
+    """A decorator for animation."""
     @wraps(f)
     def _animation(self, duration, 
             delay=0.0, loop=False, cleanup=None, pend=False):
@@ -108,8 +119,19 @@ def animation(f):
 
 class Node(object):
     def __init__(self, parent, style):
+        """Initialized the node.
+        
+        @param parent: the new node need a parent immediately 
+            to evaluate the style. It is safe to add this node 
+            under another parent after initialization, 
+            but you may have to call do_resize_recursive() 
+            to ensure the style of it being evaluated according 
+            to the latest parent.
+        @type parent: pnode.Node
+        @param style: the dictionary listing the style
+
+        """
         self.children = []
-        # XXX: repack after tree setup
         self.parent = parent
         self.set_style(style)
         #self.reset_surface()
@@ -122,6 +144,13 @@ class Node(object):
         self.repaint()
 
     def set_style(self, style):
+        """Set to a new style.
+        
+        The new style will be evaluated immediatley.
+
+        @param style: the dictionary listing the style
+
+        """
         self.style = style
         evaluate_style(self, style)
 
@@ -130,6 +159,16 @@ class Node(object):
     #
    
     def create_surface(self, x, y, width, height):
+        """Create the surface with specified position and size.
+        
+        @param x: the delta on x 
+            between the logical position and the real position
+        @param y: the delta on y
+            between the logical position and the real position
+        @param width: the real width
+        @param height: the real height
+
+        """
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(width), int(height))
         self.surface_x = x
         self.surface_y = y
@@ -137,6 +176,7 @@ class Node(object):
         self.surface_height = height
 
     def reset_surface(self):
+        """Re-create the surface using current real position and size."""
         self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(self.width), int(self.height))
         self.surface_x = 0
         self.surface_y = 0
@@ -144,6 +184,15 @@ class Node(object):
         self.surface_height = self.height
 
     def create_surface_by_scale(self, sx, sy, rel_origin=(0.5, 0.5)):
+        """Re-create the surface for scaling.
+        
+        @param sx: the scale factor on x
+        @param sy: the scale factor on y
+        @param rel_origin: a list of two float number 
+            indicating the relative center 
+            (eg. (0.5, 0.5) means the center of object)
+
+        """
         rx = rel_origin[0] * self.width
         ry = rel_origin[1] * self.height
         new_width = self.width * sx
@@ -158,6 +207,12 @@ class Node(object):
                 )
 
     def create_surface_by_rotate(self, ang, rel_origin=(0.5, 0.5)):
+        """Re-create the surface for rotation.
+        
+        @param ang: the angle
+        @param rel_origin: the same as in create_surface_by_scale()
+
+        """
         rx = rel_origin[0] * self.width
         ry = rel_origin[1] * self.height
         # the corner with max length from the origin
@@ -181,6 +236,7 @@ class Node(object):
         pass
 
     def clear_context(self, cr):
+        """Clean the context."""
         cr.save()
         cr.set_operator(cairo.OPERATOR_CLEAR)
         cr.paint()
@@ -191,10 +247,12 @@ class Node(object):
     #
 
     def add_node(self, node):
+        """Add the node as a sub-node."""
         self.children.append(node)
         node.parent = self
 
     def remove_node(self, node):
+        """Remove the node from sub-nodes."""
         self.children.remove(node)
         node.parent = None
 
@@ -204,6 +262,19 @@ class Node(object):
 
     def add_action(self, name, func, 
             duration=0.0, delay=0.0, update=False, loop=False, cleanup=None):
+        """Add an action to this node.
+        
+        Action is used to handle parameter change according to time,
+        no matter it will update the surface or not.
+
+        @param name: the name of this action. 
+            This name is used to indentify this action in remove_action().
+        @param duration: the duration in seconds
+        @param update: should update the surface in each tick?
+        @param loop: loop it?
+        @param cleanup: the callback function called after the action ends
+        
+        """
 
         self.action_list[name] = {
             'func': func,
@@ -217,14 +288,17 @@ class Node(object):
         }
 
     def remove_action(self, name):
+        """Remove the specified action."""
         if name in self.action_list:
             del self.action_list[name]
 
     def reset_actions(self):
+        """Remove all actions."""
         self.action_list = {}
         self.action_need_update = False
 
     def repaint(self):
+        """Mark this node to update it's surface in the next tick."""
         self.action_need_update = True
 
     #
@@ -233,6 +307,19 @@ class Node(object):
 
     def set_animation(self, func, 
             duration=0.0, delay=0.0, loop=False, cleanup=None, pend=False):
+        """Set the animation of this node.
+        
+        Basically, animation is the same with action, 
+        except that animation always updates the surface,
+        and only one animation will be evaluated at one time.
+        (That is because letting two animation to update 
+        on the same context at once is strange.)
+
+        @param pend: add the animation to the last. 
+            It will be evaluated after all other animation being expired.
+            (The default value False will cause deleting all other animation.)
+
+        """
 
         anime = {
                 'func': func,
@@ -250,6 +337,7 @@ class Node(object):
             self.animation_list = [ anime ]
 
     def reset_animations(self):
+        """Remove all animation."""
         self.animation_list = []
 
     #
@@ -262,25 +350,46 @@ class Node(object):
     SURFACE_ROTATE  = 1 << 2
 
     def reset_transforms(self):
+        """Reset the transformation to the initial state."""
         self.set_alpha()
         self.set_translation()
         self.surface_changed = Node.SURFACE_CHANGED
     
     def set_scale(self, sx=1.0, sy=1.0, rel_origin=(0.5, 0.5)):
+        """Scale the node.
+        
+        Parameters are the same with create_surface_by_scale().
+
+        """
         self.sx = sx
         self.sy = sy
         self.scale_origin=rel_origin
         self.surface_changed |= Node.SURFACE_SCALE | Node.SURFACE_CHANGED
 
     def set_rotate(self, ang=0.0, rel_origin=(0.5, 0.5)):
+        """Rotate the node.
+        
+        Parameters are the same with create_surface_by_rotate().
+
+        """
         self.ang=ang
         self.rotate_origin=rel_origin
         self.surface_changed |= Node.SURFACE_ROTATE | Node.SURFACE_CHANGED
 
     def set_alpha(self, alpha=1.0):
+        """Set the opacity of the node."""
         self.alpha=alpha
 
     def set_translation(self, dx=0.0, dy=0.0):
+        """Set the translation of the node.
+        
+        Note that this call won't affect the logical position of this node.
+        It only 'temporarily' moves the node.
+
+        @param dx: delta on x
+        @param dy: delta on y
+
+        """
         self.dx = dx
         self.dy = dy
 
@@ -289,14 +398,21 @@ class Node(object):
     #
     
     def on_update(self, cr):
+        """Overload this method to implement static graphics of this node."""
         pass
 
     def on_resize(self):
+        """Overload this method to implement customized resizing.
+        
+        Remember to call the original on_resize() in an overloading method.
+
+        """
         evaluate_style(self, self.style)
         self.reset_surface()
         self.repaint()
 
     def on_tick(self, interval):
+        """Overload this method to do things in each tick."""
         pass
 
     #
@@ -304,6 +420,8 @@ class Node(object):
     #
 
     def _do_update(self, interval):
+        """Update the surface."""
+        # Use the first animation
         anime = self.animation_list[0]
         if not anime['started']:
             anime['delay'] -= interval
@@ -311,7 +429,7 @@ class Node(object):
                 anime['started'] = True
 
         else:
-            # check it's life
+            # Check it's life
             anime['elapsed'] += interval
             if anime['elapsed'] > anime['duration']:
                 if anime['loop']:
@@ -322,18 +440,18 @@ class Node(object):
                     self.animation_list.pop(0)
                     return
 
-            # perform this animation
             phase = anime['elapsed'] / anime['duration']
+            # Obtain the context
             cr = self._get_context()
+            # Perform this animation
             anime['func'](self, cr, phase)
             self._updated = True
 
     def _get_context(self):
-        """Get the cairo context of this node.
-
-        1) re-create the surface as needed
-        2) push the transformation matrix to the context
-        3) return this context
+        """Get the adjusted cairo context of it's surface.
+            1. Re-create the surface as needed.
+            2. Push the transformation matrix to the context.
+            3. Return this modified context.
 
         """
         state = self.surface_changed
@@ -345,7 +463,8 @@ class Node(object):
                 # XXX: to be implemented
                 self.create_surface_by_scale_rotate()
             elif state & Node.SURFACE_SCALE:
-                self.create_surface_by_scale(self.sx, self.sy, self.scale_origin)
+                self.create_surface_by_scale(self.sx, self.sy, 
+                        self.scale_origin)
                 cr = cairo.Context(self.surface)
                 cr.scale(self.sx, self.sy)
                 self.clear_context(cr)
@@ -365,27 +484,37 @@ class Node(object):
         return cr
         
     def do_update(self, interval):
+        """Update the surface of this node."""
         self._updated = False
+        # Try to update using animation
         if len(self.animation_list) > 0:
             self._do_update(interval)
 
+        # If marked as "need to update",
+        # and not being updated using animation,
+        # update it using the static on_update() method.
         if self.action_need_update and not self._updated:
             cr = self._get_context()
             self.on_update(cr)
             self.action_need_update = False
 
     def do_update_recursive(self, cr, x, y, interval):
+        """Update this node and all sub-nodes."""
         stack = [(self, x, y, self.z_index)]
         queue = []
 
+        # Create the list of nodes
         while stack:
             current, x, y, z = stack.pop(0)
+            # The position (x, y, z-index) is inherited from the parent node.
             node_x = x + current.x
             node_y = y + current.y
             z_index = z + current.z_index
             queue.append((current, node_x, node_y, z_index))
-            stack = [(node, node_x, node_y, z_index) for node in current.children] + stack
+            stack = [(node, node_x, node_y, z_index) \
+                    for node in current.children] + stack
 
+        # Sort by z-index
         queue.sort(key=lambda tup: -tup[3])
 
         while queue:
@@ -397,8 +526,9 @@ class Node(object):
             cr.paint_with_alpha(current.alpha)
 
     def do_tick(self, interval):
+        """Perform actions and on_tick() method of this node."""
         self.on_tick(interval)
-        # loop over all actions
+        # Loop over all actions
         tmp_list = self.action_list.copy()
         for name, action in tmp_list.iteritems():
             if not action['started']:
@@ -407,7 +537,7 @@ class Node(object):
                     action['started'] = True
 
             else:
-                # check it's life
+                # Check it's life
                 action['elapsed'] += interval
                 if action['elapsed'] > action['duration']:
                     if action['loop']:
@@ -418,15 +548,17 @@ class Node(object):
                         del self.action_list[name]
                         continue
 
-                # perform the action
                 phase = 0.0 if action['duration'] <= 0.0 \
                             else action['elapsed'] / action['duration']
+                # Perform the action
                 action['func'](self, interval, phase)
                 if action['update']:
-                    # cleaned in do_update_recursive
+                    # Mark as "need to update".
+                    # It is cleaned in do_update_recursive().
                     self.action_need_update = True
 
     def do_tick_recursive(self, interval):
+        """Perform do_tick() for this node and all sub-nodes."""
         queue = [self]
         while queue:
             current = queue.pop(0)
@@ -435,6 +567,7 @@ class Node(object):
                 queue.append(node)
 
     def do_resize_recursive(self):
+        """Perform on_resize() for this node and all sub-nodes."""
         queue = [self]
         while queue:
             current = queue.pop(0)
